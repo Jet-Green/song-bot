@@ -15,9 +15,6 @@ const sunoWebhook = async (req, res) => {
   try {
     const { code, msg, data } = req.body;
     
-    console.log('Code:', code, 'Msg:', msg);
-    console.log('Data:', JSON.stringify(data, null, 2));
-    
     if (!data) {
       console.log('No data in callback');
       return res.status(200).json({ code: 200, msg: 'no data' });
@@ -28,10 +25,8 @@ const sunoWebhook = async (req, res) => {
     console.log('CallbackType:', callbackType, 'TaskID:', task_id);
     
     if (callbackType === 'error' || code !== 200) {
-      console.log('Error callback received:', msg);
-      
       const song = await Song.findOne({ provider_song_id: task_id });
-      if (song) {
+      if (song && song.status !== 'error') {
         const user = await User.findById(song.user_id);
         
         await Song.findByIdAndUpdate(song._id, {
@@ -56,53 +51,56 @@ const sunoWebhook = async (req, res) => {
     }
     
     if (callbackType === 'complete' && songs && songs.length > 0) {
-      console.log('Processing', songs.length, 'tracks');
+      const song = await Song.findOne({ provider_song_id: task_id });
       
-      for (const songData of songs) {
-        const song = await Song.findOne({ provider_song_id: task_id });
+      if (!song) {
+        console.log('Song not found in DB for task_id:', task_id);
+        return res.status(200).json({ code: 200, msg: 'song not found' });
+      }
+      
+      if (song.status === 'done') {
+        console.log('Song already processed, skipping');
+        return res.status(200).json({ code: 200, msg: 'already processed' });
+      }
+      
+      const user = await User.findById(song.user_id);
+      const songData = songs[0];
+      
+      console.log('Processing song, audio_url:', songData?.audio_url);
+      
+      if (songData?.audio_url) {
+        await Song.findByIdAndUpdate(song._id, {
+          status: 'done',
+          audio_url: songData.audio_url,
+          lyrics: songData.prompt,
+          duration_sec: songData.duration,
+          finished_at: new Date()
+        });
         
-        if (song) {
-          const user = await User.findById(song.user_id);
+        if (user) {
+          await bot.telegram.sendMessage(
+            user.telegram_id,
+            `✅ Ваша песня готова!\n\n🎵 ${song.prompt}\n\n🔊 Слушать: ${songData.audio_url}`
+          );
           
-          console.log('Song found, audio_url:', songData.audio_url);
+          await logEvent(user.telegram_id, EVENTS.SONG_GENERATED);
+        }
+      } else {
+        await Song.findByIdAndUpdate(song._id, {
+          status: 'error',
+          finished_at: new Date()
+        });
+        
+        if (user) {
+          await bot.telegram.sendMessage(
+            user.telegram_id,
+            '❌ Не удалось сгенерировать песню. Кредит возвращен на баланс.'
+          );
           
-          if (songData.audio_url) {
-            await Song.findByIdAndUpdate(song._id, {
-              status: 'done',
-              audio_url: songData.audio_url,
-              lyrics: songData.prompt,
-              duration_sec: songData.duration,
-              finished_at: new Date()
-            });
-            
-            if (user) {
-              await bot.telegram.sendMessage(
-                user.telegram_id,
-                `✅ Ваша песня готова!\n\n🎵 ${song.prompt}\n\n🔊 Слушать: ${songData.audio_url}`
-              );
-              
-              await logEvent(user.telegram_id, EVENTS.SONG_GENERATED);
-            }
-          } else {
-            await Song.findByIdAndUpdate(song._id, {
-              status: 'error',
-              finished_at: new Date()
-            });
-            
-            if (user) {
-              await bot.telegram.sendMessage(
-                user.telegram_id,
-                '❌ Не удалось сгенерировать песню. Кредит возвращен на баланс.'
-              );
-              
-              user.credits += 1;
-              await user.save();
-              
-              await logEvent(user.telegram_id, EVENTS.SONG_FAILED);
-            }
-          }
-        } else {
-          console.log('Song not found in DB for task_id:', task_id);
+          user.credits += 1;
+          await user.save();
+          
+          await logEvent(user.telegram_id, EVENTS.SONG_FAILED);
         }
       }
     } else if (callbackType === 'first') {
@@ -126,7 +124,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(config.port, () => {
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
 });
 
