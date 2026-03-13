@@ -145,6 +145,8 @@ export const setupCommands = (bot, keyboard) => {
   });
 
   bot.command('admin', async (ctx) => {
+    console.log('Admin command called by:', ctx.from.id);
+    
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply('У вас нет доступа к этой команде');
     }

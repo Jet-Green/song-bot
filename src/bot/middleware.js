@@ -1,13 +1,12 @@
 import config from '../config/index.js';
 
 export const isAdmin = (userId) => {
-  console.log('Checking admin:', userId, 'adminIds:', config.adminIds);
-  return config.adminIds.includes(userId);
+  const result = config.adminIds.includes(userId);
+  console.log('isAdmin check:', userId, 'adminIds:', config.adminIds, 'result:', result);
+  return result;
 };
 
 export const adminMiddleware = async (ctx, next) => {
-  console.log(isAdmin(ctx.from?.id));
-
   if (isAdmin(ctx.from?.id)) {
     return next();
   }
