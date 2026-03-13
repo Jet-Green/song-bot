@@ -8,6 +8,7 @@ import { verifyResultSignature, processPayment } from '../services/robokassaServ
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const sunoWebhook = async (req, res) => {
   console.log('=== Suno Callback Received ===');
