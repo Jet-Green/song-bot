@@ -6,6 +6,7 @@ const adminIds = process.env.ADMIN_IDS
 
 export default {
   botToken: process.env.BOT_TOKEN,
+  adminBotToken: process.env.ADMIN_BOT_TOKEN,
   mongoUri: process.env.MONGO_URI,
   adminIds,
   port: process.env.PORT || 3000,
