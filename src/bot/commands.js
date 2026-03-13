@@ -167,4 +167,33 @@ export const setupCommands = (bot, keyboard) => {
     const totalUsers = await User.countDocuments();
     return ctx.reply(`Всего пользователей: ${totalUsers}`);
   });
+
+  bot.command('addbonus', adminMiddleware, async (ctx) => {
+    const args = ctx.message.text.split(' ').slice(1);
+    
+    if (args.length < 2) {
+      return ctx.reply('Использование: /addbonus <telegram_id> <количество>');
+    }
+    
+    const telegramId = Number(args[0]);
+    const amount = Number(args[1]);
+    
+    if (isNaN(telegramId) || isNaN(amount)) {
+      return ctx.reply('Некорректные параметры');
+    }
+    
+    const user = await User.findOne({ telegram_id: telegramId });
+    
+    if (!user) {
+      return ctx.reply('Пользователь не найден');
+    }
+    
+    user.bonus_credits += amount;
+    await user.save();
+    
+    return ctx.reply(
+      `✅ Начислено ${amount} бонусных кредитов пользователю ${telegramId}\n` +
+      `Новый баланс: ${user.bonus_credits} бонусных, ${user.credits} обычных`
+    );
+  });
 };
