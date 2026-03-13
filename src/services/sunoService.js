@@ -16,7 +16,7 @@ export const generateMusic = async (songId, params) => {
       prompt,
       customMode = false,
       instrumental = false,
-      model = 'V4_5',
+      model = 'V4',
       style = '',
       title = '',
       negativeTags = '',

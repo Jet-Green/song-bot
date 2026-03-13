@@ -16,10 +16,7 @@ export const STYLES = [
 ];
 
 export const MODELS = [
-  { id: 'V5', name: 'V5 (лучшее качество, до 8 мин)' },
-  { id: 'V4_5PLUS', name: 'V4.5 Plus (до 8 мин)' },
-  { id: 'V4_5', name: 'V4.5 (до 8 мин)' },
-  { id: 'V4', name: 'V4 (до 4 мин)' }
+  { id: 'V4', name: 'V4' }
 ];
 
 class SongWizard {
@@ -50,7 +47,7 @@ class SongWizard {
       style: '',
       title: '',
       prompt: '',
-      model: 'V4_5'
+      model: 'V4'
     });
   }
 
@@ -97,13 +94,6 @@ class SongWizard {
             ? '🎵 *Введите описание инструментала:*\n\nНапример: "спокойная фортепианная мелодия с мягкими звуками природы"'
             : '🎵 *Введите текст песни или описание:*\n\nЕсли хотите, чтобы AI написал текст - просто опишите тему.\nЕсли хотите свой текст - напишите его.',
           keyboard: [[{ text: 'Отмена', callback_data: 'wizard_cancel' }]]
-        };
-
-      case STEPS.MODEL:
-        const modelButtons = MODELS.map(m => [{ text: m.name, callback_data: `wizard_model_${m.id}` }]);
-        return {
-          text: '🎵 *Выберите модель:*',
-          keyboard: modelButtons
         };
 
       default:
