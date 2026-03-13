@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import Payment from '../models/Payment.js';
+import User from '../models/User.js';
 import { addCredits, logEvent, EVENTS } from './creditService.js';
 import config from '../config/index.js';
 import { bot } from '../bot/index.js';
@@ -17,6 +18,11 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
     throw new Error('Invalid package');
   }
 
+  const user = await User.findOne({ telegram_id: userId });
+  if (!user) {
+    throw new Error('User not found');
+  }
+
   const invId = Date.now();
   const outSum = pkg.price.toFixed(2);
   const description = `Покупка ${pkg.name}`;
@@ -25,7 +31,7 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
   const signatureValue = crypto.createHash('md5').update(signatureString).digest('hex').toLowerCase();
 
   const payment = await Payment.create({
-    user_id: userId,
+    user_id: user._id,
     provider: 'robokassa',
     status: 'pending',
     amount: pkg.price,
