@@ -12,10 +12,6 @@ fi
 echo "Installing dependencies..."
 npm install
 
-# Проверка MongoDB
-echo "Checking MongoDB..."
-node -e "require('./src/db')()" || echo "WARNING: MongoDB connection failed (will retry on start)"
-
 # Запуск с PM2
 echo "Starting bot with PM2..."
 pm2 stop song-bot 2>/dev/null || true
