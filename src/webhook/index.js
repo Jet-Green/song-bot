@@ -84,10 +84,25 @@ const sunoWebhook = async (req, res) => {
           finished_at: new Date()
         });
         
+        let message = `✅ Ваша песня готова!\n\n`;
+        
+        if (songData.title) {
+          message += `🎤 *${songData.title}*\n\n`;
+        }
+        
+        message += `🎵 ${song.prompt}\n\n`;
+        
+        if (songData.prompt && !songData.prompt.startsWith('[')) {
+          message += `📝 *Текст песни:*\n${songData.prompt}\n\n`;
+        }
+        
+        message += `🔊 Слушать: ${songData.audio_url}`;
+        
         if (user) {
           await bot.telegram.sendMessage(
             user.telegram_id,
-            `✅ Ваша песня готова!\n\n🎵 ${song.prompt}\n\n🔊 Слушать: ${songData.audio_url}`
+            message,
+            { parse_mode: 'Markdown' }
           );
           
           await logEvent(user.telegram_id, EVENTS.SONG_GENERATED);
@@ -119,6 +134,38 @@ const sunoWebhook = async (req, res) => {
       }
     } else if (callbackType === 'first') {
       console.log('First track ready, waiting for complete...');
+      
+      const song = await Song.findOne({ provider_song_id: task_id });
+      if (!song) {
+        return res.status(200).json({ code: 200, msg: 'song not found' });
+      }
+      
+      const user = await User.findById(song.user_id);
+      const songData = songs?.[0];
+      
+      if (user && songData?.audio_url) {
+        await Song.findByIdAndUpdate(song._id, {
+          status: 'processing',
+          audio_url: songData.audio_url,
+          duration_sec: songData.duration,
+          finished_at: new Date()
+        });
+        
+        let message = `🎵 *Первая версия песни готова!*\n\n`;
+        
+        if (songData.title) {
+          message += `🎤 *${songData.title}*\n\n`;
+        }
+        
+        if (songData.prompt) {
+          message += `🎵 ${songData.prompt}\n\n`;
+        }
+        
+        message += `🔊 Слушать: ${songData.audio_url}\n\n`;
+        message += `_Ожидаем финальную версию..._`;
+        
+        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' });
+      }
     } else if (callbackType === 'text') {
       console.log('Text generation complete, waiting for audio...');
     } else {
