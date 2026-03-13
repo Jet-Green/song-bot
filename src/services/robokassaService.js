@@ -71,8 +71,19 @@ export const verifyResultSignature = (params) => {
     return false;
   }
 
-  const signatureString = `${config.robokassa.merchantLogin}:${OutSum}:${InvId}:${config.robokassa.password2}:Shp_credits=${Shp_credits}:Shp_user_id=${Shp_user_id}`;
+  const outSum = parseFloat(OutSum).toFixed(2);
+  const signatureString = `${config.robokassa.merchantLogin}:${outSum}:${InvId}:${config.robokassa.password2}:Shp_credits=${Shp_credits}:Shp_user_id=${Shp_user_id}`;
   const expectedSignature = crypto.createHash('md5').update(signatureString).digest('hex').toLowerCase();
+
+  console.log('=== Signature Verification ===');
+  console.log('Input OutSum:', OutSum);
+  console.log('Normalized OutSum:', outSum);
+  console.log('InvId:', InvId);
+  console.log('Shp_credits:', Shp_credits);
+  console.log('Shp_user_id:', Shp_user_id);
+  console.log('SignatureString:', signatureString);
+  console.log('Expected Signature:', expectedSignature);
+  console.log('Received Signature:', SignatureValue.toLowerCase());
 
   return SignatureValue.toLowerCase() === expectedSignature;
 };
