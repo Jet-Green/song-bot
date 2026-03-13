@@ -84,26 +84,26 @@ const sunoWebhook = async (req, res) => {
           finished_at: new Date()
         });
         
-        let message = `✅ Ваша песня готова!\n\n`;
+        let caption = `✅ Ваша песня готова!\n\n`;
         
         if (songData.title) {
-          message += `🎤 *${songData.title}*\n\n`;
+          caption += `🎤 *${songData.title}*\n\n`;
         }
         
-        message += `🎵 ${song.prompt}\n\n`;
+        caption += `🎵 ${song.prompt}\n\n`;
         
         if (songData.prompt && !songData.prompt.startsWith('[')) {
-          message += `📝 *Текст песни:*\n${songData.prompt}\n\n`;
+          caption += `📝 *Текст песни:*\n${songData.prompt}\n\n`;
         }
         
-        message += `🔊 Слушать: ${songData.audio_url}`;
+        caption += `🔊 Слушать: ${songData.audio_url}`;
         
         if (user) {
-          await bot.telegram.sendMessage(
-            user.telegram_id,
-            message,
-            { parse_mode: 'Markdown' }
-          );
+          if (songData.image_url) {
+            await bot.telegram.sendPhoto(user.telegram_id, songData.image_url, { caption, parse_mode: 'Markdown' });
+          } else {
+            await bot.telegram.sendMessage(user.telegram_id, caption, { parse_mode: 'Markdown' });
+          }
           
           await logEvent(user.telegram_id, EVENTS.SONG_GENERATED);
         }
@@ -151,20 +151,20 @@ const sunoWebhook = async (req, res) => {
           finished_at: new Date()
         });
         
-        let message = `🎵 *Первая версия песни готова!*\n\n`;
+        let caption = `🎵 *Первая версия песни готова!*\n\n`;
         
         if (songData.title) {
-          message += `🎤 *${songData.title}*\n\n`;
+          caption += `🎤 *${songData.title}*\n\n`;
         }
         
-        if (songData.prompt) {
-          message += `🎵 ${songData.prompt}\n\n`;
+        caption += `🔊 Слушать: ${songData.audio_url}\n\n`;
+        caption += `_🎶Музыка генерируется..._`;
+        
+        if (songData.image_url) {
+          await bot.telegram.sendPhoto(user.telegram_id, songData.image_url, { caption, parse_mode: 'Markdown' });
+        } else {
+          await bot.telegram.sendMessage(user.telegram_id, caption, { parse_mode: 'Markdown' });
         }
-        
-        message += `🔊 Слушать: ${songData.audio_url}\n\n`;
-        message += `_Ожидаем финальную версию..._`;
-        
-        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' });
       }
     } else if (callbackType === 'text') {
       console.log('Text generation complete, waiting for audio...');
