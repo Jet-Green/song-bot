@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  referral_source: String,
   created_at: {
     type: Date,
     default: Date.now

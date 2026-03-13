@@ -155,7 +155,16 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 export const setupUserCommands = (bot, mainKeyboard) => {
   bot.command('start', async (ctx) => {
     const { id, username, first_name, last_name } = ctx.from;
-    await findOrCreateUser(id, username, first_name, last_name);
+    
+    let referralSource = null;
+    if (ctx.message && ctx.message.text) {
+      const parts = ctx.message.text.split(' ');
+      if (parts.length > 1) {
+        referralSource = parts[1];
+      }
+    }
+    
+    await findOrCreateUser(id, username, first_name, last_name, referralSource);
 
     const welcomeText = `🎤 *Добро пожаловать в AI Song Bot!*
 
