@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const eventSchema = new mongoose.Schema({
   user_id: {
@@ -28,4 +28,4 @@ eventSchema.index({ user_id: 1 });
 eventSchema.index({ event_time: -1 });
 eventSchema.index({ event_name: 1 });
 
-module.exports = mongoose.model('Event', eventSchema);
+export default mongoose.model('Event', eventSchema);

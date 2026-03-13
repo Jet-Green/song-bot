@@ -1,8 +1,7 @@
-const User = require('../models/User');
-const Event = require('../models/Event');
-const Song = require('../models/Song');
+import User from '../models/User.js';
+import Event from '../models/Event.js';
 
-const EVENTS = {
+export const EVENTS = {
   START_BOT: 'start_bot',
   SONG_REQUESTED: 'song_requested',
   SONG_GENERATED: 'song_generated',
@@ -12,7 +11,7 @@ const EVENTS = {
   CREDITS_GRANTED: 'credits_granted'
 };
 
-const findOrCreateUser = async (telegramId, username, firstName, lastName) => {
+export const findOrCreateUser = async (telegramId, username, firstName, lastName) => {
   let user = await User.findOne({ telegram_id: telegramId });
   
   if (!user) {
@@ -31,7 +30,7 @@ const findOrCreateUser = async (telegramId, username, firstName, lastName) => {
   return user;
 };
 
-const getUserBalance = async (telegramId) => {
+export const getUserBalance = async (telegramId) => {
   const user = await User.findOne({ telegram_id: telegramId });
   if (!user) return null;
   return {
@@ -41,7 +40,7 @@ const getUserBalance = async (telegramId) => {
   };
 };
 
-const deductCredit = async (telegramId) => {
+export const deductCredit = async (telegramId) => {
   const user = await User.findOne({ telegram_id: telegramId });
   if (!user) return { success: false, reason: 'user_not_found' };
   
@@ -58,7 +57,7 @@ const deductCredit = async (telegramId) => {
   return { success: true };
 };
 
-const addCredits = async (telegramId, amount, bonusAmount = 0) => {
+export const addCredits = async (telegramId, amount, bonusAmount = 0) => {
   const user = await User.findOne({ telegram_id: telegramId });
   if (!user) return { success: false };
   
@@ -78,7 +77,7 @@ const addCredits = async (telegramId, amount, bonusAmount = 0) => {
   return { success: true };
 };
 
-const logEvent = async (telegramId, eventName, credits = 0, meta = {}) => {
+export const logEvent = async (telegramId, eventName, credits = 0, meta = {}) => {
   const user = await User.findOne({ telegram_id: telegramId });
   if (!user) return null;
   
@@ -88,13 +87,4 @@ const logEvent = async (telegramId, eventName, credits = 0, meta = {}) => {
     credits,
     meta
   });
-};
-
-module.exports = {
-  EVENTS,
-  findOrCreateUser,
-  getUserBalance,
-  deductCredit,
-  addCredits,
-  logEvent
 };

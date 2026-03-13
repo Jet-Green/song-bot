@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const songSchema = new mongoose.Schema({
   user_id: {
@@ -33,4 +33,4 @@ songSchema.index({ user_id: 1 });
 songSchema.index({ status: 1 });
 songSchema.index({ created_at: -1 });
 
-module.exports = mongoose.model('Song', songSchema);
+export default mongoose.model('Song', songSchema);

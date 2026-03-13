@@ -1,15 +1,15 @@
-const { Telegraf, Markup } = require('telegraf');
-const config = require('../config');
-const { setupCommands } = require('./commands');
+import { Telegraf, Markup } from 'telegraf';
+import config from '../config/index.js';
+import { setupCommands } from './commands.js';
 
-const bot = new Telegraf(config.botToken);
+export const bot = new Telegraf(config.botToken);
 
 const mainKeyboard = Markup.keyboard([
   ['🎵 Сгенерировать песню', '💰 Мой баланс'],
   ['📜 Мои песни', '💎 Купить кредиты']
 ]).resize();
 
-const startBot = async () => {
+export const startBot = async () => {
   setupCommands(bot, mainKeyboard);
   
   const webhookUrl = process.env.WEBHOOK_URL;
@@ -24,5 +24,3 @@ const startBot = async () => {
   
   return bot;
 };
-
-module.exports = { bot, startBot };

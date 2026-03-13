@@ -1,19 +1,11 @@
-const express = require('express');
-const Song = require('../models/Song');
-const User = require('../models/User');
-const { logEvent, EVENTS } = require('../services/creditService');
-const { bot } = require('../bot/index');
+import express from 'express';
+import Song from '../models/Song.js';
+import User from '../models/User.js';
+import { logEvent, EVENTS } from '../services/creditService.js';
+import { bot } from '../bot/index.js';
 
 const app = express();
 app.use(express.json());
-
-app.use((req, res, next) => {
-  if (req.path === '/webhook/telegram') {
-    express.json()(req, res, next);
-  } else {
-    next();
-  }
-});
 
 const sunoWebhook = async (req, res) => {
   try {
@@ -89,4 +81,4 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-module.exports = { app, sunoWebhook };
+export { app, sunoWebhook };

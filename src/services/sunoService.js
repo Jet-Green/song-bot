@@ -1,6 +1,6 @@
-const axios = require('axios');
-const config = require('../config');
-const Song = require('../models/Song');
+import axios from 'axios';
+import config from '../config/index.js';
+import Song from '../models/Song.js';
 
 const sunoApi = axios.create({
   baseURL: config.suno.apiUrl,
@@ -10,7 +10,7 @@ const sunoApi = axios.create({
   }
 });
 
-const generateMusic = async (songId, prompt, isInstrumental = false) => {
+export const generateMusic = async (songId, prompt, isInstrumental = false) => {
   try {
     const response = await sunoApi.post('/api/v1/generate', {
       prompt: prompt,
@@ -39,7 +39,7 @@ const generateMusic = async (songId, prompt, isInstrumental = false) => {
   }
 };
 
-const getMusicDetails = async (taskId) => {
+export const getMusicDetails = async (taskId) => {
   try {
     const response = await sunoApi.get(`/api/v1/generate/redirect/${taskId}`);
     return response.data;
@@ -47,9 +47,4 @@ const getMusicDetails = async (taskId) => {
     console.error('Get music details error:', error.response?.data || error.message);
     return null;
   }
-};
-
-module.exports = {
-  generateMusic,
-  getMusicDetails
 };

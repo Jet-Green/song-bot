@@ -1,8 +1,8 @@
-const { adminMiddleware } = require('./middleware');
-const { findOrCreateUser, getUserBalance, deductCredit, logEvent, EVENTS } = require('../services/creditService');
-const { generateMusic } = require('../services/sunoService');
-const Song = require('../models/Song');
-const User = require('../models/User');
+import { adminMiddleware } from './middleware.js';
+import { findOrCreateUser, getUserBalance, deductCredit, logEvent, EVENTS } from '../services/creditService.js';
+import { generateMusic } from '../services/sunoService.js';
+import Song from '../models/Song.js';
+import User from '../models/User.js';
 
 const WELCOME_TEXT = `🎤 *Добро пожаловать в AI Song Bot!*
 
@@ -11,6 +11,8 @@ const WELCOME_TEXT = `🎤 *Добро пожаловать в AI Song Bot!*
 Выберите действие из меню ниже или просто напишите текст для генерации.
 
 *Стоимость генерации: 1 кредит*`;
+
+let mainKeyboard;
 
 const createSong = async (ctx, prompt) => {
   const userId = ctx.from.id;
@@ -50,9 +52,7 @@ const createSong = async (ctx, prompt) => {
   return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
 };
 
-let mainKeyboard;
-
-const setupCommands = (bot, keyboard) => {
+export const setupCommands = (bot, keyboard) => {
   mainKeyboard = keyboard;
   
   bot.command('start', async (ctx) => {
@@ -168,5 +168,3 @@ const setupCommands = (bot, keyboard) => {
     return ctx.reply(`Всего пользователей: ${totalUsers}`);
   });
 };
-
-module.exports = { setupCommands };
