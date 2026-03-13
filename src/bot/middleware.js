@@ -4,7 +4,7 @@ export const isAdmin = (userId) => {
   return config.adminIds.includes(userId);
 };
 
-export const adminMiddleware = (ctx, next) => {
+export const adminMiddleware = async (ctx, next) => {
   if (isAdmin(ctx.from.id)) {
     return next();
   }

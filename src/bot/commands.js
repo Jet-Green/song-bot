@@ -145,22 +145,27 @@ export const setupCommands = (bot, keyboard) => {
   });
 
   bot.command('admin', adminMiddleware, async (ctx) => {
-    const totalUsers = await User.countDocuments();
-    const totalSongs = await Song.countDocuments();
-    const pendingSongs = await Song.countDocuments({ status: 'pending' });
-    const processingSongs = await Song.countDocuments({ status: 'processing' });
-    const doneSongs = await Song.countDocuments({ status: 'done' });
-    const errorSongs = await Song.countDocuments({ status: 'error' });
-    
-    return ctx.reply(
-      `📊 Панель администратора:\n\n` +
-      `Пользователей: ${totalUsers}\n` +
-      `Всего песен: ${totalSongs}\n` +
-      `В очереди: ${pendingSongs}\n` +
-      `В процессе: ${processingSongs}\n` +
-      `Готово: ${doneSongs}\n` +
-      `Ошибки: ${errorSongs}`
-    );
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalSongs = await Song.countDocuments();
+      const pendingSongs = await Song.countDocuments({ status: 'pending' });
+      const processingSongs = await Song.countDocuments({ status: 'processing' });
+      const doneSongs = await Song.countDocuments({ status: 'done' });
+      const errorSongs = await Song.countDocuments({ status: 'error' });
+      
+      return ctx.reply(
+        `📊 Панель администратора:\n\n` +
+        `Пользователей: ${totalUsers}\n` +
+        `Всего песен: ${totalSongs}\n` +
+        `В очереди: ${pendingSongs}\n` +
+        `В процессе: ${processingSongs}\n` +
+        `Готово: ${doneSongs}\n` +
+        `Ошибки: ${errorSongs}`
+      );
+    } catch (error) {
+      console.error('Admin command error:', error);
+      return ctx.reply(`Ошибка: ${error.message}`);
+    }
   });
 
   bot.command('stats', adminMiddleware, async (ctx) => {
