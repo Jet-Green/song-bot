@@ -1,4 +1,4 @@
-import { adminMiddleware } from './middleware.js';
+import { isAdmin } from './middleware.js';
 import { findOrCreateUser, getUserBalance, deductCredit, logEvent, EVENTS } from '../services/creditService.js';
 import { generateMusic } from '../services/sunoService.js';
 import Song from '../models/Song.js';
@@ -144,7 +144,11 @@ export const setupCommands = (bot, keyboard) => {
     return createSong(ctx, ctx.message.text);
   });
 
-  bot.command('admin', adminMiddleware, async (ctx) => {
+  bot.command('admin', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply('У вас нет доступа к этой команде');
+    }
+    
     try {
       const totalUsers = await User.countDocuments();
       const totalSongs = await Song.countDocuments();
@@ -168,12 +172,20 @@ export const setupCommands = (bot, keyboard) => {
     }
   });
 
-  bot.command('stats', adminMiddleware, async (ctx) => {
+  bot.command('stats', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply('У вас нет доступа к этой команде');
+    }
+    
     const totalUsers = await User.countDocuments();
     return ctx.reply(`Всего пользователей: ${totalUsers}`);
   });
 
-  bot.command('addbonus', adminMiddleware, async (ctx) => {
+  bot.command('addbonus', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply('У вас нет доступа к этой команде');
+    }
+    
     const args = ctx.message.text.split(' ').slice(1);
     
     if (args.length < 2) {
