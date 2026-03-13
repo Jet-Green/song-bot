@@ -8,7 +8,7 @@ import { bot } from '../bot/index.js';
 const ROBOKASSA_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 export const CREDIT_PACKAGES = {
-  10: { credits: 10, price: 1, name: '10 кредитов' },
+  10: { credits: 10, price: 290, name: '10 кредитов' },
   50: { credits: 50, price: 990, name: '50 кредитов' }
 };
 
