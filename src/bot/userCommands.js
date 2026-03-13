@@ -234,6 +234,18 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     );
   });
 
+  bot.hears('📄 Документы', async (ctx) => {
+    return ctx.reply(
+      '📋 *Документы сервиса «AI Песни»*\n\n' +
+      'Пожалуйста, ознакомьтесь с официальными документами сервиса:\n\n' +
+      '• [Публичная оферта](https://matroxxx.github.io/song-firetechno-bot/offer.html)\n\n' +
+      '• [Политика конфиденциальности](https://matroxxx.github.io/song-firetechno-bot/privacy.html)\n\n' +
+      '• [Информация о сервисе](https://matroxxx.github.io/song-firetechno-bot/index.html)\n\n' +
+      'Оплачивая подписку и используя бот, вы подтверждаете согласие с условиями публичной оферты и политикой обработки персональных данных.',
+      { parse_mode: 'Markdown' }
+    );
+  });
+
   bot.command('generate', async (ctx) => {
     const args = ctx.message.text.split(' ').slice(1).join(' ');
     if (!args) {

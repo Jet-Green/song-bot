@@ -6,7 +6,8 @@ export const bot = new Telegraf(config.botToken);
 
 const mainKeyboard = Markup.keyboard([
   ['🎵 Сгенерировать песню', '💰 Мой баланс'],
-  ['📜 Мои песни', '💎 Купить кредиты']
+  ['📜 Мои песни', '💎 Купить кредиты'],
+  ['📄 Документы']
 ]).resize();
 
 export const startBot = async () => {
