@@ -90,23 +90,60 @@ export const setupAdminCommands = (bot) => {
     const song = await Song.findOne({ provider_song_id: providerSongId });
     
     if (!song) {
-      return ctx.reply('Песня не найдена');
+      return ctx.reply('Песня не найдена в БД');
     }
     
-    if (song.provider_song_id && song.status === 'processing') {
-      const details = await getMusicDetails(song.provider_song_id);
-      console.log('Suno details:', JSON.stringify(details, null, 2));
+    await ctx.reply('Проверяю статус...');
+    
+    const details = await getMusicDetails(providerSongId);
+    
+    if (!details || details.code !== 200) {
+      return ctx.reply(
+        `🎵 Статус песни:\n\n` +
+        `ID: ${song._id}\n` +
+        `Prompt: ${song.prompt}\n` +
+        `Status в БД: ${song.status}\n` +
+        `Audio URL: ${song.audio_url || 'нет'}\n\n` +
+        `❌ Не удалось получить статус из API`
+      );
     }
     
-    return ctx.reply(
-      `🎵 Статус песни:\n\n` +
-      `ID: ${song._id}\n` +
-      `Prompt: ${song.prompt}\n` +
-      `Status: ${song.status}\n` +
-      `Audio URL: ${song.audio_url || 'нет'}\n` +
-      `Provider Song ID: ${song.provider_song_id || 'нет'}\n` +
-      `Created: ${song.created_at}\n` +
-      `Finished: ${song.finished_at || 'ещё не finished'}`
-    );
+    const data = details.data;
+    let statusText = `🎵 *Статус песни:*\n\n`;
+    statusText += `*Suno Status:* ${data.status}\n`;
+    statusText += `*Prompt:* ${song.prompt}\n`;
+    
+    if (data.response?.sunoData?.length > 0) {
+      const track = data.response.sunoData[0];
+      statusText += `\n✅ *Готово!*\n`;
+      statusText += `Title: ${track.title}\n`;
+      statusText += `Audio: ${track.audioUrl}\n`;
+      statusText += `Duration: ${track.duration} сек\n`;
+      statusText += `Tags: ${track.tags}\n`;
+      
+      if (song.status !== 'done') {
+        await Song.findByIdAndUpdate(song._id, {
+          status: 'done',
+          audio_url: track.audioUrl,
+          lyrics: track.prompt,
+          duration_sec: track.duration,
+          finished_at: new Date()
+        });
+        statusText += `\n_Обновлено в БД_`;
+      }
+    } else if (data.status === 'PENDING' || data.status === 'TEXT_SUCCESS' || data.status === 'FIRST_SUCCESS') {
+      statusText += `\n⏳ *В процессе...*`;
+    } else if (data.status === 'CREATE_TASK_FAILED' || data.status === 'GENERATE_AUDIO_FAILED' || data.status === 'SENSITIVE_WORD_ERROR') {
+      statusText += `\n❌ *Ошибка:* ${data.errorMessage || data.status}`;
+      
+      if (song.status !== 'error') {
+        await Song.findByIdAndUpdate(song._id, {
+          status: 'error',
+          finished_at: new Date()
+        });
+      }
+    }
+    
+    return ctx.replyWithMarkdown(statusText);
   });
 };

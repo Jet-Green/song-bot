@@ -223,7 +223,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
     if (data === 'wizard_cancel') {
       songWizard.clearSession(userId);
-      return ctx.editMessageText('❌ Сессия отменена.', mainKeyboard);
+      return ctx.editMessageText('❌ Сессия отменена.');
     }
 
     if (data.startsWith('wizard_mode_')) {
@@ -261,6 +261,8 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
     if (data.startsWith('wizard_model_')) {
       try {
+        await ctx.answerCbQuery('🎵 Запускаем генерацию...');
+        
         const modelId = data.replace('wizard_model_', '');
         session.model = modelId;
         
@@ -301,14 +303,14 @@ export const setupUserCommands = (bot, mainKeyboard) => {
         if (!result.success) {
           user.credits += 1;
           await user.save();
-          return ctx.editMessageText(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
+          return ctx.editMessageText(`❌ Ошибка генерации: ${result.error}`);
         }
         
-        return ctx.editMessageText('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
+        return ctx.editMessageText('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.');
       } catch (error) {
         console.error('Wizard model error:', error);
         songWizard.clearSession(userId);
-        return ctx.editMessageText(`❌ Ошибка: ${error.message}`, mainKeyboard);
+        return ctx.editMessageText(`❌ Ошибка: ${error.message}`);
       }
     }
 

@@ -71,7 +71,7 @@ export const generateMusic = async (songId, params) => {
 
 export const getMusicDetails = async (taskId) => {
   try {
-    const response = await sunoApi.get(`/api/v1/generate/redirect/${taskId}`);
+    const response = await sunoApi.get(`/api/v1/generate/record-info?taskId=${taskId}`);
     return response.data;
   } catch (error) {
     console.error('Get music details error:', error.response?.data || error.message);
