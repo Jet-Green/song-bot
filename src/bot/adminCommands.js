@@ -82,12 +82,12 @@ export const setupAdminCommands = (bot) => {
     const args = ctx.message.text.split(' ').slice(1);
     
     if (args.length < 1) {
-      return ctx.reply('Использование: /songstatus <song_id>');
+      return ctx.reply('Использование: /songstatus <provider_song_id>');
     }
     
-    const songId = args[0];
+    const providerSongId = args[0];
     
-    const song = await Song.findById(songId);
+    const song = await Song.findOne({ provider_song_id: providerSongId });
     
     if (!song) {
       return ctx.reply('Песня не найдена');
@@ -95,7 +95,7 @@ export const setupAdminCommands = (bot) => {
     
     if (song.provider_song_id && song.status === 'processing') {
       const details = await getMusicDetails(song.provider_song_id);
-      console.log('Suno details:', details);
+      console.log('Suno details:', JSON.stringify(details, null, 2));
     }
     
     return ctx.reply(
