@@ -6,6 +6,8 @@ export const isAdmin = (userId) => {
 };
 
 export const adminMiddleware = async (ctx, next) => {
+  console.log(isAdmin(ctx.from?.id));
+
   if (isAdmin(ctx.from?.id)) {
     return next();
   }
