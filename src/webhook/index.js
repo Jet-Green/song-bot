@@ -3,6 +3,7 @@ import Song from '../models/Song.js';
 import User from '../models/User.js';
 import { logEvent, EVENTS } from '../services/creditService.js';
 import { bot } from '../bot/index.js';
+import config from '../config/index.js';
 
 const app = express();
 app.use(express.json());
@@ -71,20 +72,14 @@ const sunoWebhook = async (req, res) => {
   }
 };
 
-app.post('/webhook/telegram', async (req, res) => {
-  console.log('Telegram webhook received:', req.body.message?.text || req.body.callback_query?.data || 'unknown');
-  try {
-    await bot.handleUpdate(req.body, res);
-  } catch (error) {
-    console.error('handleUpdate error:', error);
-    res.status(500).send('Error');
-  }
-});
-
 app.post('/webhook/suno', sunoWebhook);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.listen(config.port, () => {
+  console.log(`Server running on port ${config.port}`);
 });
 
 export { app, sunoWebhook };
