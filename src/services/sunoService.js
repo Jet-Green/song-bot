@@ -10,15 +10,41 @@ const sunoApi = axios.create({
   }
 });
 
-export const generateMusic = async (songId, prompt, isInstrumental = false) => {
+export const generateMusic = async (songId, params) => {
   try {
-    const response = await sunoApi.post('/api/v1/generate', {
-      prompt: prompt,
-      customMode: false,
-      instrumental: isInstrumental,
-      model: 'V4_5',
-      callBackUrl: config.suno.callbackUrl
-    });
+    const {
+      prompt,
+      customMode = false,
+      instrumental = false,
+      model = 'V4_5',
+      style = '',
+      title = '',
+      negativeTags = '',
+      vocalGender = '',
+      styleWeight = 0.5,
+      weirdnessConstraint = 0.5,
+      audioWeight = 0.5
+    } = params;
+
+    const requestBody = {
+      prompt,
+      customMode,
+      instrumental,
+      model,
+      callBackUrl: config.suno.callbackUrl,
+      styleWeight,
+      weirdnessConstraint,
+      audioWeight
+    };
+
+    if (customMode) {
+      requestBody.style = style;
+      requestBody.title = title;
+      if (vocalGender) requestBody.vocalGender = vocalGender;
+      if (negativeTags) requestBody.negativeTags = negativeTags;
+    }
+
+    const response = await sunoApi.post('/api/v1/generate', requestBody);
 
     if (response.data.code === 200) {
       const taskId = response.data.data.taskId;
@@ -26,7 +52,9 @@ export const generateMusic = async (songId, prompt, isInstrumental = false) => {
       await Song.findByIdAndUpdate(songId, {
         provider: 'suno',
         provider_song_id: taskId,
-        status: 'processing'
+        status: 'processing',
+        style: style || 'auto',
+        language: instrumental ? 'instrumental' : 'auto'
       });
       
       return { success: true, taskId };
