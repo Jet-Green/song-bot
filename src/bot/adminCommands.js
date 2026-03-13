@@ -1,6 +1,7 @@
 import { isAdmin } from './middleware.js';
 import Song from '../models/Song.js';
 import User from '../models/User.js';
+import { getMusicDetails } from '../services/sunoService.js';
 
 export const setupAdminCommands = (bot) => {
   bot.command('admin', async (ctx) => {
@@ -70,6 +71,42 @@ export const setupAdminCommands = (bot) => {
     return ctx.reply(
       `✅ Начислено ${amount} бонусных кредитов пользователю ${telegramId}\n` +
       `Новый баланс: ${user.bonus_credits} бонусных, ${user.credits} обычных`
+    );
+  });
+
+  bot.command('songstatus', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply('У вас нет доступа к этой команде');
+    }
+    
+    const args = ctx.message.text.split(' ').slice(1);
+    
+    if (args.length < 1) {
+      return ctx.reply('Использование: /songstatus <song_id>');
+    }
+    
+    const songId = args[0];
+    
+    const song = await Song.findById(songId);
+    
+    if (!song) {
+      return ctx.reply('Песня не найдена');
+    }
+    
+    if (song.provider_song_id && song.status === 'processing') {
+      const details = await getMusicDetails(song.provider_song_id);
+      console.log('Suno details:', details);
+    }
+    
+    return ctx.reply(
+      `🎵 Статус песни:\n\n` +
+      `ID: ${song._id}\n` +
+      `Prompt: ${song.prompt}\n` +
+      `Status: ${song.status}\n` +
+      `Audio URL: ${song.audio_url || 'нет'}\n` +
+      `Provider Song ID: ${song.provider_song_id || 'нет'}\n` +
+      `Created: ${song.created_at}\n` +
+      `Finished: ${song.finished_at || 'ещё не finished'}`
     );
   });
 };
