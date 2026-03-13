@@ -6,39 +6,39 @@ import User from '../models/User.js';
 
 const createSong = async (ctx, prompt, mainKeyboard) => {
   const userId = ctx.from.id;
-  
+
   const balance = await getUserBalance(userId);
   if (!balance || balance.total < 1) {
     await logEvent(userId, EVENTS.PAYWALL_OPEN);
     return ctx.reply('❌ Недостаточно кредитов. Купите кредиты для генерации.', mainKeyboard);
   }
-  
+
   const deductResult = await deductCredit(userId);
   if (!deductResult.success) {
     return ctx.reply('Ошибка при списании кредитов');
   }
-  
+
   const user = await User.findOne({ telegram_id: userId });
   if (!user) {
     return ctx.reply('Пользователь не найден');
   }
-  
+
   const song = await Song.create({
     user_id: user._id,
     prompt: prompt,
     status: 'pending'
   });
-  
+
   await logEvent(userId, EVENTS.SONG_REQUESTED, 1, { song_id: song._id.toString() });
-  
+
   const result = await generateMusic(song._id, { prompt });
-  
+
   if (!result.success) {
     user.credits += 1;
     await user.save();
     return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
   }
-  
+
   return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
 };
 
@@ -46,9 +46,9 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
   const session = songWizard.getSession(userId);
   if (!session) return false;
 
-  const user = await User.findOne({ telegram_id: userId);
+  const user = await User.findOne({ telegram_id: userId });
   const balance = await getUserBalance(userId);
-  
+
   if (!balance || balance.total < 1) {
     songWizard.clearSession(userId);
     await logEvent(userId, EVENTS.PAYWALL_OPEN);
@@ -61,7 +61,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     session.prompt = ctx.message.text;
     session.step = STEPS.MODEL;
     songWizard.setSession(userId, session);
-    
+
     const keyboard = songWizard.getKeyboardForStep(userId);
     return ctx.reply(keyboard.text, { parse_mode: 'Markdown', ...songWizard.buildInlineKeyboard(keyboard.keyboard) });
   }
@@ -70,7 +70,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     session.title = ctx.message.text;
     session.step = STEPS.LYRICS;
     songWizard.setSession(userId, session);
-    
+
     const keyboard = songWizard.getKeyboardForStep(userId);
     return ctx.reply(keyboard.text, { parse_mode: 'Markdown', ...songWizard.buildInlineKeyboard(keyboard.keyboard) });
   }
@@ -78,9 +78,9 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
   if (step === STEPS.MODEL && ctx.callbackQuery) {
     const modelId = ctx.callbackQuery.data.replace('wizard_model_', '');
     session.model = modelId;
-    
+
     await deductCredit(userId);
-    
+
     const song = await Song.create({
       user_id: user._id,
       prompt: session.prompt,
@@ -88,9 +88,9 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
       title: session.title,
       status: 'pending'
     });
-    
+
     await logEvent(userId, EVENTS.SONG_REQUESTED, 1, { song_id: song._id.toString() });
-    
+
     const params = {
       prompt: session.prompt,
       customMode: session.mode === 'custom',
@@ -99,17 +99,17 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
       style: session.style,
       title: session.title
     };
-    
+
     const result = await generateMusic(song._id, params);
-    
+
     songWizard.clearSession(userId);
-    
+
     if (!result.success) {
       user.credits += 1;
       await user.save();
       return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
     }
-    
+
     return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
   }
 
@@ -120,7 +120,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
   bot.command('start', async (ctx) => {
     const { id, username, first_name, last_name } = ctx.from;
     await findOrCreateUser(id, username, first_name, last_name);
-    
+
     const welcomeText = `🎤 *Добро пожаловать в AI Song Bot!*
 
 Я могу написать и спеть для вас песню на любую тему.
@@ -128,7 +128,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 Выберите действие из меню ниже или просто напишите текст для генерации.
 
 *Стоимость генерации: 1 кредит*`;
-    
+
     return ctx.replyWithMarkdown(welcomeText, mainKeyboard);
   });
 
@@ -137,7 +137,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     if (!balance) {
       return ctx.reply('Пользователь не найден');
     }
-    
+
     return ctx.reply(
       `💰 Ваш баланс:\n\n` +
       `Кредиты: ${balance.credits}\n` +
@@ -152,7 +152,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     if (!balance) {
       return ctx.reply('Пользователь не найден');
     }
-    
+
     return ctx.reply(
       `💰 Ваш баланс:\n\n` +
       `Кредиты: ${balance.credits}\n` +
@@ -170,20 +170,20 @@ export const setupUserCommands = (bot, mainKeyboard) => {
   bot.hears('📜 Мои песни', async (ctx) => {
     const user = await User.findOne({ telegram_id: ctx.from.id });
     if (!user) return ctx.reply('Пользователь не найден');
-    
+
     const songs = await Song.find({ user_id: user._id }).sort({ created_at: -1 }).limit(5);
-    
+
     if (songs.length === 0) {
       return ctx.reply('У вас пока нет песен');
     }
-    
+
     let text = '📜 *Ваши последние песни:*\n\n';
     songs.forEach((song, i) => {
       const statusEmoji = song.status === 'done' ? '✅' : song.status === 'processing' ? '⏳' : song.status === 'error' ? '❌' : '⏸';
       const audioLink = song.audio_url ? `\n🔊 ${song.audio_url}` : '';
       text += `${i + 1}. ${statusEmoji} ${song.prompt.slice(0, 30)}${song.prompt.length > 30 ? '...' : ''}${audioLink}\n\n`;
     });
-    
+
     return ctx.replyWithMarkdown(text);
   });
 
@@ -215,7 +215,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
   bot.on('callback_query', async (ctx) => {
     const userId = ctx.from.id;
     const data = ctx.callbackQuery.data;
-    
+
     const session = songWizard.getSession(userId);
     if (!session) {
       return ctx.answerCbQuery();
@@ -231,7 +231,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       session.mode = mode;
       session.step = mode === 'simple' ? STEPS.LYRICS : STEPS.INSTRUMENTAL;
       songWizard.setSession(userId, session);
-      
+
       const keyboard = songWizard.getKeyboardForStep(userId);
       return ctx.editMessageText(keyboard.text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard.keyboard } });
     }
@@ -241,7 +241,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       session.instrumental = instrumental;
       session.step = STEPS.STYLE;
       songWizard.setSession(userId, session);
-      
+
       const keyboard = songWizard.getKeyboardForStep(userId);
       return ctx.editMessageText(keyboard.text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard.keyboard } });
     }
@@ -254,7 +254,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       session.style = style;
       session.step = STEPS.TITLE;
       songWizard.setSession(userId, session);
-      
+
       const keyboard = songWizard.getKeyboardForStep(userId);
       return ctx.editMessageText(keyboard.text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard.keyboard } });
     }
@@ -264,12 +264,12 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
   bot.on('text', async (ctx) => {
     if (ctx.message.text.startsWith('/')) return;
-    if (ctx.message.text.includes('Сгенерировать') || ctx.message.text.includes('Баланс') || 
-        ctx.message.text.includes('Мои песни') || ctx.message.text.includes('Купить')) return;
+    if (ctx.message.text.includes('Сгенерировать') || ctx.message.text.includes('Баланс') ||
+      ctx.message.text.includes('Мои песни') || ctx.message.text.includes('Купить')) return;
 
     const processed = await processWizardStep(ctx, ctx.from.id, mainKeyboard);
     if (processed) return;
-    
+
     return createSong(ctx, ctx.message.text, mainKeyboard);
   });
 };
