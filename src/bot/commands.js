@@ -16,50 +16,50 @@ let mainKeyboard;
 
 const createSong = async (ctx, prompt) => {
   const userId = ctx.from.id;
-  
+
   const balance = await getUserBalance(userId);
   if (!balance || balance.total < 1) {
     await logEvent(userId, EVENTS.PAYWALL_OPEN);
     return ctx.reply('❌ Недостаточно кредитов. Купите кредиты для генерации.', mainKeyboard);
   }
-  
+
   const deductResult = await deductCredit(userId);
   if (!deductResult.success) {
     return ctx.reply('Ошибка при списании кредитов');
   }
-  
+
   const user = await User.findOne({ telegram_id: userId });
   if (!user) {
     return ctx.reply('Пользователь не найден');
   }
-  
+
   const song = await Song.create({
     user_id: user._id,
     prompt: prompt,
     status: 'pending'
   });
-  
+
   await logEvent(userId, EVENTS.SONG_REQUESTED, 1, { song_id: song._id.toString() });
-  
+
   const result = await generateMusic(song._id, prompt);
-  
+
   if (!result.success) {
     user.credits += 1;
     await user.save();
     return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
   }
-  
+
   return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
 };
 
 export const setupCommands = (bot, keyboard) => {
   mainKeyboard = keyboard;
-  
+
   bot.command('start', async (ctx) => {
     const { id, username, first_name, last_name } = ctx.from;
-    
+
     await findOrCreateUser(id, username, first_name, last_name);
-    
+
     return ctx.replyWithMarkdown(WELCOME_TEXT, mainKeyboard);
   });
 
@@ -68,7 +68,7 @@ export const setupCommands = (bot, keyboard) => {
     if (!balance) {
       return ctx.reply('Пользователь не найден');
     }
-    
+
     return ctx.reply(
       `💰 Ваш баланс:\n\n` +
       `Кредиты: ${balance.credits}\n` +
@@ -83,7 +83,7 @@ export const setupCommands = (bot, keyboard) => {
     if (!balance) {
       return ctx.reply('Пользователь не найден');
     }
-    
+
     return ctx.reply(
       `💰 Ваш баланс:\n\n` +
       `Кредиты: ${balance.credits}\n` +
@@ -99,20 +99,20 @@ export const setupCommands = (bot, keyboard) => {
   bot.hears('📜 Мои песни', async (ctx) => {
     const user = await User.findOne({ telegram_id: ctx.from.id });
     if (!user) return ctx.reply('Пользователь не найден');
-    
+
     const songs = await Song.find({ user_id: user._id }).sort({ created_at: -1 }).limit(5);
-    
+
     if (songs.length === 0) {
       return ctx.reply('У вас пока нет песен');
     }
-    
+
     let text = '📜 *Ваши последние песни:*\n\n';
     songs.forEach((song, i) => {
       const statusEmoji = song.status === 'done' ? '✅' : song.status === 'processing' ? '⏳' : song.status === 'error' ? '❌' : '⏸';
       const audioLink = song.audio_url ? `\n🔊 ${song.audio_url}` : '';
       text += `${i + 1}. ${statusEmoji} ${song.prompt.slice(0, 30)}${song.prompt.length > 30 ? '...' : ''}${audioLink}\n\n`;
     });
-    
+
     return ctx.replyWithMarkdown(text);
   });
 
@@ -136,21 +136,13 @@ export const setupCommands = (bot, keyboard) => {
     return createSong(ctx, args);
   });
 
-  bot.on('text', async (ctx) => {
-    if (ctx.message.text.startsWith('/')) return;
-    if (ctx.message.text.includes('Сгенерировать') || ctx.message.text.includes('Баланс') || 
-        ctx.message.text.includes('Мои песни') || ctx.message.text.includes('Купить')) return;
-    
-    return createSong(ctx, ctx.message.text);
-  });
-
   bot.command('admin', async (ctx) => {
     console.log('Admin command called by:', ctx.from.id);
-    
+
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply('У вас нет доступа к этой команде');
     }
-    
+
     try {
       const totalUsers = await User.countDocuments();
       const totalSongs = await Song.countDocuments();
@@ -158,7 +150,7 @@ export const setupCommands = (bot, keyboard) => {
       const processingSongs = await Song.countDocuments({ status: 'processing' });
       const doneSongs = await Song.countDocuments({ status: 'done' });
       const errorSongs = await Song.countDocuments({ status: 'error' });
-      
+
       return ctx.reply(
         `📊 Панель администратора:\n\n` +
         `Пользователей: ${totalUsers}\n` +
@@ -178,7 +170,7 @@ export const setupCommands = (bot, keyboard) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply('У вас нет доступа к этой команде');
     }
-    
+
     const totalUsers = await User.countDocuments();
     return ctx.reply(`Всего пользователей: ${totalUsers}`);
   });
@@ -187,32 +179,40 @@ export const setupCommands = (bot, keyboard) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply('У вас нет доступа к этой команде');
     }
-    
+
     const args = ctx.message.text.split(' ').slice(1);
-    
+
     if (args.length < 2) {
       return ctx.reply('Использование: /addbonus <telegram_id> <количество>');
     }
-    
+
     const telegramId = Number(args[0]);
     const amount = Number(args[1]);
-    
+
     if (isNaN(telegramId) || isNaN(amount)) {
       return ctx.reply('Некорректные параметры');
     }
-    
+
     const user = await User.findOne({ telegram_id: telegramId });
-    
+
     if (!user) {
       return ctx.reply('Пользователь не найден');
     }
-    
+
     user.bonus_credits += amount;
     await user.save();
-    
+
     return ctx.reply(
       `✅ Начислено ${amount} бонусных кредитов пользователю ${telegramId}\n` +
       `Новый баланс: ${user.bonus_credits} бонусных, ${user.credits} обычных`
     );
+  });
+
+  bot.on('text', async (ctx) => {
+    if (ctx.message.text.startsWith('/')) return;
+    if (ctx.message.text.includes('Сгенерировать') || ctx.message.text.includes('Баланс') ||
+      ctx.message.text.includes('Мои песни') || ctx.message.text.includes('Купить')) return;
+
+    return createSong(ctx, ctx.message.text);
   });
 };
