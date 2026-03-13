@@ -7,7 +7,7 @@ import { bot } from '../bot/index.js';
 const ROBOKASSA_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 export const CREDIT_PACKAGES = {
-  10: { credits: 10, price: 290, name: '10 кредитов' },
+  10: { credits: 10, price: 1, name: '10 кредитов' },
   50: { credits: 50, price: 990, name: '50 кредитов' }
 };
 
@@ -60,7 +60,7 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
 
 export const verifyResultSignature = (params) => {
   const { OutSum, InvId, SignatureValue, Shp_user_id, Shp_credits } = params;
-  
+
   if (!OutSum || !SignatureValue) {
     return false;
   }
@@ -73,7 +73,7 @@ export const verifyResultSignature = (params) => {
 
 export const processPayment = async (params) => {
   const { OutSum, InvId, Shp_user_id, Shp_credits } = params;
-  
+
   const userId = parseInt(Shp_user_id);
   const creditsAmount = parseInt(Shp_credits);
   const amount = parseFloat(OutSum);
