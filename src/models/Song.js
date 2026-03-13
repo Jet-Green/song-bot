@@ -11,6 +11,8 @@ const songSchema = new mongoose.Schema({
     required: true
   },
   style: String,
+  title: String,
+  instrumental: Boolean,
   language: String,
   status: {
     type: String,

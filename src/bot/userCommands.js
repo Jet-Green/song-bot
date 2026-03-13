@@ -294,6 +294,55 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       return ctx.editMessageText(keyboard.text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard.keyboard } });
     }
 
+    if (data.startsWith('retry_')) {
+      const songId = data.replace('retry_', '');
+      
+      try {
+        await ctx.answerCbQuery('Пробуем снова...');
+        
+        const song = await Song.findById(songId);
+        if (!song) {
+          return ctx.editMessageText('Песня не найдена');
+        }
+        
+        const user = await User.findOne({ telegram_id: userId });
+        if (!user) {
+          return ctx.editMessageText('Пользователь не найден');
+        }
+        
+        const balance = await getUserBalance(userId);
+        if (!balance || balance.total < 1) {
+          return ctx.editMessageText('❌ Недостаточно кредитов для повторной генерации.');
+        }
+        
+        await deductCredit(userId);
+        
+        const params = {
+          prompt: song.prompt,
+          customMode: !!song.style,
+          instrumental: song.instrumental || false,
+          model: 'V4',
+          style: song.style || '',
+          title: song.title || ''
+        };
+        
+        console.log('Retrying song with params:', params);
+        
+        const result = await generateMusic(song._id, params);
+        
+        if (!result.success) {
+          user.credits += 1;
+          await user.save();
+          return ctx.editMessageText(`❌ Ошибка генерации: ${result.error}`);
+        }
+        
+        return ctx.editMessageText('🎵 Песня поставлена в очередь на генерацию повторно!\n⏳ Обычно это занимает 1-2 минуты.');
+      } catch (error) {
+        console.error('Retry error:', error);
+        return ctx.editMessageText(`❌ Ошибка: ${error.message}`);
+      }
+    }
+
     ctx.answerCbQuery();
   });
 

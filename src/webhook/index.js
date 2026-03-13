@@ -37,7 +37,14 @@ const sunoWebhook = async (req, res) => {
         if (user) {
           await bot.telegram.sendMessage(
             user.telegram_id,
-            `❌ Не удалось сгенерировать песню: ${msg}\nКредит возвращен на баланс.`
+            `❌ Не удалось сгенерировать песню: ${msg}\n\nКредит возвращен на баланс.`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🔄 Попробовать снова', callback_data: `retry_${song._id}` }]
+                ]
+              }
+            }
           );
           
           user.credits += 1;
@@ -94,7 +101,14 @@ const sunoWebhook = async (req, res) => {
         if (user) {
           await bot.telegram.sendMessage(
             user.telegram_id,
-            '❌ Не удалось сгенерировать песню. Кредит возвращен на баланс.'
+            `❌ Не удалось сгенерировать песню: ${msg}\n\nКредит возвращен на баланс.`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🔄 Попробовать снова', callback_data: `retry_${song._id}` }]
+                ]
+              }
+            }
           );
           
           user.credits += 1;

@@ -56,6 +56,8 @@ export const generateMusic = async (songId, params) => {
         provider_song_id: taskId,
         status: 'processing',
         style: style || 'auto',
+        title: title || '',
+        instrumental: instrumental,
         language: instrumental ? 'instrumental' : 'auto'
       });
       
