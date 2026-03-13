@@ -1,4 +1,5 @@
 import { findOrCreateUser, getUserBalance, deductCredit, logEvent, EVENTS } from '../services/creditService.js';
+import { generatePaymentLink, CREDIT_PACKAGES } from '../services/robokassaService.js';
 import { generateMusic } from '../services/sunoService.js';
 import { songWizard, STEPS, STYLES } from '../services/songWizard.js';
 import Song from '../models/Song.js';
@@ -224,13 +225,22 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
   bot.hears('💎 Купить кредиты', async (ctx) => {
     await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
+    
+    const packages = Object.values(CREDIT_PACKAGES);
+    
+    const keyboard = {
+      inline_keyboard: packages.map(pkg => [
+        { text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${pkg.credits}` }
+      ])
+    };
+    
     return ctx.reply(
       '💎 *Покупка кредитов:*\n\n' +
-      '1. 10 кредитов - 299₽\n' +
-      '2. 30 кредитов - 799₽\n' +
-      '3. 50 кредитов - 1199₽\n\n' +
-      'Нажмите на нужный пакет для оплаты',
-      { parse_mode: 'Markdown' }
+      'Выберите пакет для оплаты:',
+      { 
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      }
     );
   });
 
@@ -246,23 +256,49 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     );
   });
 
-  bot.command('generate', async (ctx) => {
-    const args = ctx.message.text.split(' ').slice(1).join(' ');
-    if (!args) {
-      return ctx.reply('Введите текст для генерации песни: /generate текст');
-    }
-    return createSong(ctx, args, mainKeyboard);
-  });
-
-  bot.command('cancel', async (ctx) => {
-    songWizard.clearSession(ctx.from.id);
-    return ctx.reply('Сессия отменена.', mainKeyboard);
-  });
-
   bot.on('callback_query', async (ctx) => {
-    const userId = ctx.from.id;
-    const data = ctx.callbackQuery.data;
+    const query = ctx.callbackQuery;
+    const data = query.data;
+    
+    if (data.startsWith('buy_credits_')) {
+      const creditsAmount = parseInt(data.replace('buy_credits_', ''));
+      const userId = ctx.from.id;
+      
+      await ctx.answerCbQuery('Подготовка платежа...');
+      
+      try {
+        const payment = await generatePaymentLink(userId, creditsAmount);
+        
+        const successKeyboard = {
+          inline_keyboard: [
+            [{ text: '💳 Оплатить', url: payment.url }],
+            [{ text: '🔄 Проверить оплату', callback_data: `check_payment_${payment.invId}` }]
+          ]
+        };
+        
+        await ctx.editMessageText(
+          `💎 *Покупка ${CREDIT_PACKAGES[creditsAmount].name}*\n\n` +
+          `💰 Сумма: *${payment.price}₽*\n\n` +
+          `Нажмите кнопку ниже для оплаты:`,
+          { 
+            parse_mode: 'Markdown',
+            reply_markup: successKeyboard
+          }
+        );
+      } catch (error) {
+        console.error('Payment error:', error);
+        await ctx.answerCbQuery('Ошибка при создании платежа');
+      }
+      
+      return;
+    }
+    
+    if (data.startsWith('check_payment_')) {
+      await ctx.answerCbQuery('Проверка статуса...');
+      return;
+    }
 
+    const userId = ctx.from.id;
     const session = songWizard.getSession(userId);
     if (!session) {
       return ctx.answerCbQuery();

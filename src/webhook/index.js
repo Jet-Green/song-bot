@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import { logEvent, EVENTS } from '../services/creditService.js';
 import { bot } from '../bot/index.js';
 import config from '../config/index.js';
+import { verifyResultSignature, processPayment } from '../services/robokassaService.js';
 
 const app = express();
 app.use(express.json());
@@ -209,6 +210,104 @@ const sunoWebhook = async (req, res) => {
 };
 
 app.post('/webhook/suno', sunoWebhook);
+
+const robokassaResult = async (req, res) => {
+  console.log('=== Robokassa Result Callback ===');
+  console.log('Query:', req.query);
+  console.log('Body:', req.body);
+
+  try {
+    const params = {
+      ...req.query,
+      ...req.body
+    };
+
+    const { OutSum, InvId, SignatureValue } = params;
+
+    if (!OutSum || !SignatureValue) {
+      console.error('Missing required params');
+      return res.status(400).send('Missing required parameters');
+    }
+
+    if (!verifyResultSignature(params)) {
+      console.error('Invalid signature');
+      return res.status(400).send('Invalid signature');
+    }
+
+    const success = await processPayment(params);
+    
+    if (success) {
+      return res.status(200).send('OK');
+    } else {
+      return res.status(500).send('Payment processing failed');
+    }
+  } catch (error) {
+    console.error('Robokassa webhook error:', error);
+    return res.status(500).send('Internal error');
+  }
+};
+
+const robokassaSuccess = async (req, res) => {
+  console.log('=== Robokassa Success Redirect ===');
+  const { InvId, OutSum } = req.query;
+  
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Оплата</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+          .container { text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .success { color: #4CAF50; font-size: 48px; }
+          h1 { color: #333; }
+          p { color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success">✓</div>
+          <h1>Оплата успешна!</h1>
+          <p>Проверьте ваш баланс в боте.</p>
+          <p>Если кредиты не были начислены, обратитесь в поддержку.</p>
+        </div>
+      </body>
+    </html>
+  `);
+};
+
+const robokassaFail = async (req, res) => {
+  console.log('=== Robokassa Fail Redirect ===');
+  
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Оплата</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+          .container { text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .error { color: #f44336; font-size: 48px; }
+          h1 { color: #333; }
+          p { color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="error">✗</div>
+          <h1>Оплата не завершена</h1>
+          <p>Попробуйте ещё раз или выберите другой способ оплаты.</p>
+        </div>
+      </body>
+    </html>
+  `);
+};
+
+app.post('/webhook/robokassa', robokassaResult);
+app.get('/payment/success', robokassaSuccess);
+app.get('/payment/fail', robokassaFail);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
