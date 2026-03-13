@@ -168,6 +168,35 @@ const sunoWebhook = async (req, res) => {
       }
     } else if (callbackType === 'text') {
       console.log('Text generation complete, waiting for audio...');
+      
+      const song = await Song.findOne({ provider_song_id: task_id });
+      if (!song) {
+        return res.status(200).json({ code: 200, msg: 'song not found' });
+      }
+      
+      const user = await User.findById(song.user_id);
+      const songData = songs?.[0];
+      
+      if (user && songData?.prompt) {
+        await Song.findByIdAndUpdate(song._id, {
+          lyrics: songData.prompt
+        });
+        
+        const previewText = songData.prompt.length > 500 
+          ? songData.prompt.slice(0, 500) + '...'
+          : songData.prompt;
+        
+        let message = `📝 *Текст песни готов!*\n\n`;
+        
+        if (songData.title) {
+          message += `🎤 *${songData.title}*\n\n`;
+        }
+        
+        message += `🎵 ${previewText}\n\n`;
+        message += `_🎶 Музыка генерируется..._`;
+        
+        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' });
+      }
     } else {
       console.log('Unknown callbackType:', callbackType);
     }
