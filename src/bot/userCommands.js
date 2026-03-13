@@ -259,6 +259,59 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       return ctx.editMessageText(keyboard.text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard.keyboard } });
     }
 
+    if (data.startsWith('wizard_model_')) {
+      try {
+        const modelId = data.replace('wizard_model_', '');
+        session.model = modelId;
+        
+        console.log('Wizard model selected:', modelId, 'session:', session);
+        
+        const user = await User.findOne({ telegram_id: userId });
+        if (!user) {
+          return ctx.answerCbQuery('Пользователь не найден', { show_alert: true });
+        }
+
+        await deductCredit(userId);
+        
+        const song = await Song.create({
+          user_id: user._id,
+          prompt: session.prompt,
+          style: session.style,
+          title: session.title,
+          status: 'pending'
+        });
+        
+        await logEvent(userId, EVENTS.SONG_REQUESTED, 1, { song_id: song._id.toString() });
+        
+        const params = {
+          prompt: session.prompt,
+          customMode: session.mode === 'custom',
+          instrumental: session.instrumental,
+          model: session.model,
+          style: session.style,
+          title: session.title
+        };
+        
+        console.log('Generating music with params:', params);
+        
+        const result = await generateMusic(song._id, params);
+        
+        songWizard.clearSession(userId);
+        
+        if (!result.success) {
+          user.credits += 1;
+          await user.save();
+          return ctx.editMessageText(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
+        }
+        
+        return ctx.editMessageText('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
+      } catch (error) {
+        console.error('Wizard model error:', error);
+        songWizard.clearSession(userId);
+        return ctx.editMessageText(`❌ Ошибка: ${error.message}`, mainKeyboard);
+      }
+    }
+
     ctx.answerCbQuery();
   });
 

@@ -38,12 +38,14 @@ export const generateMusic = async (songId, params) => {
     };
 
     if (customMode) {
-      requestBody.style = style;
-      requestBody.title = title;
+      requestBody.style = style || 'Pop';
+      requestBody.title = title || 'Untitled';
       if (vocalGender) requestBody.vocalGender = vocalGender;
       if (negativeTags) requestBody.negativeTags = negativeTags;
     }
 
+    console.log('Suno API request:', JSON.stringify(requestBody, null, 2));
+    
     const response = await sunoApi.post('/api/v1/generate', requestBody);
 
     if (response.data.code === 200) {
