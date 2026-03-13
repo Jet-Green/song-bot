@@ -27,7 +27,7 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
   const outSum = pkg.price.toFixed(2);
   const description = `Покупка ${pkg.name}`;
 
-  const signatureString = `${config.robokassa.merchantLogin}:${outSum}:${invId}:${config.robokassa.password1}`;
+  const signatureString = `${config.robokassa.merchantLogin}:${outSum}:${invId}:${config.robokassa.password1}:Shp_credits=${creditsAmount}:Shp_user_id=${userId}`;
   const signatureValue = crypto.createHash('md5').update(signatureString).digest('hex').toLowerCase();
 
   const payment = await Payment.create({
