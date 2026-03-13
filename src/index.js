@@ -10,6 +10,7 @@ const start = async () => {
   await startBot();
   
   if (config.adminBotToken) {
+    console.log('Starting admin bot with token:', config.adminBotToken.slice(0, 20) + '...');
     const { Telegraf } = await import('telegraf');
     adminBot = new Telegraf(config.adminBotToken);
     
@@ -17,8 +18,14 @@ const start = async () => {
     setupAdminCommands(adminBot);
     
     adminBot.launch(() => {
-      console.log('Admin bot started');
+      console.log('Admin bot started successfully');
     });
+    
+    adminBot.catch((err) => {
+      console.error('Admin bot error:', err);
+    });
+  } else {
+    console.log('No ADMIN_BOT_TOKEN - admin bot not started');
   }
   
   console.log(`Webhook server running on port ${config.port}`);
