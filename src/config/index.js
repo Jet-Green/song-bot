@@ -1,4 +1,5 @@
 import 'dotenv/config';
+console.log(process.env);
 
 export default {
   botToken: process.env.BOT_TOKEN,
