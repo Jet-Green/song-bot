@@ -71,8 +71,14 @@ const sunoWebhook = async (req, res) => {
   }
 };
 
-app.post('/webhook/telegram', (req, res) => {
-  bot.handleUpdate(req.body, res);
+app.post('/webhook/telegram', async (req, res) => {
+  console.log('Telegram webhook received:', req.body.message?.text || req.body.callback_query?.data || 'unknown');
+  try {
+    await bot.handleUpdate(req.body, res);
+  } catch (error) {
+    console.error('handleUpdate error:', error);
+    res.status(500).send('Error');
+  }
 });
 
 app.post('/webhook/suno', sunoWebhook);
