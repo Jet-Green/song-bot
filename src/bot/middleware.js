@@ -1,6 +1,8 @@
 import config from '../config/index.js';
 
 export const isAdmin = (userId) => {
+  console.log(userId);
+
   const result = config.adminIds.includes(userId);
   console.log('isAdmin check:', userId, 'adminIds:', config.adminIds, 'result:', result);
   return result;
