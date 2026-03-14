@@ -107,3 +107,30 @@ export const getTotalStats = async () => {
     totalRevenue: totalRevenue[0]?.total || 0
   };
 };
+
+export const getHourlyStats = async (date = new Date()) => {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  
+  const stats = [];
+  
+  for (let hour = 0; hour < 24; hour++) {
+    const hourStart = new Date(dayStart);
+    hourStart.setHours(hour);
+    
+    const hourEnd = new Date(hourStart);
+    hourEnd.setHours(hour + 1);
+    
+    const count = await Event.countDocuments({
+      event_name: EVENTS.SONG_REQUESTED,
+      event_time: { $gte: hourStart, $lt: hourEnd }
+    });
+    
+    stats.push({ hour: `${hour.toString().padStart(2, '0')}:00`, count });
+  }
+  
+  return stats;
+};
