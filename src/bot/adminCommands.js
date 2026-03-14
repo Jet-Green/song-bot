@@ -3,6 +3,18 @@ import Song from '../models/Song.js';
 import User from '../models/User.js';
 import { getMusicDetails } from '../services/sunoService.js';
 
+const adminKeyboard = (pendingSongs, processingSongs) => {
+  return [
+    [
+      { text: `📊 Статистика`, callback_data: 'admin_stats' },
+      { text: `🎵 Песни (${pendingSongs} в очереди)`, callback_data: 'admin_songs' }
+    ],
+    [
+      { text: `👥 Пользователи`, callback_data: 'admin_users' }
+    ]
+  ];
+};
+
 export const setupAdminCommands = (bot) => {
   bot.command('admin', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
@@ -24,11 +36,121 @@ export const setupAdminCommands = (bot) => {
         `В очереди: ${pendingSongs}\n` +
         `В процессе: ${processingSongs}\n` +
         `Готово: ${doneSongs}\n` +
-        `Ошибки: ${errorSongs}`
+        `Ошибки: ${errorSongs}`,
+        {
+          reply_markup: {
+            inline_keyboard: adminKeyboard(pendingSongs, processingSongs)
+          }
+        }
       );
     } catch (error) {
       console.error('Admin command error:', error);
       return ctx.reply(`Ошибка: ${error.message}`);
+    }
+  });
+
+  bot.action('admin_stats', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.answerCbQuery('У вас нет доступа');
+    }
+    
+    try {
+      const totalUsers = await User.countDocuments();
+      const totalSongs = await Song.countDocuments();
+      const pendingSongs = await Song.countDocuments({ status: 'pending' });
+      const processingSongs = await Song.countDocuments({ status: 'processing' });
+      const doneSongs = await Song.countDocuments({ status: 'done' });
+      const errorSongs = await Song.countDocuments({ status: 'error' });
+      
+      return ctx.editMessageText(
+        `📊 Статистика:\n\n` +
+        `Пользователей: ${totalUsers}\n` +
+        `Всего песен: ${totalSongs}\n` +
+        `В очереди: ${pendingSongs}\n` +
+        `В процессе: ${processingSongs}\n` +
+        `Готово: ${doneSongs}\n` +
+        `Ошибки: ${errorSongs}`,
+        {
+          reply_markup: {
+            inline_keyboard: adminKeyboard(pendingSongs, processingSongs)
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Admin stats error:', error);
+      return ctx.answerCbQuery(`Ошибка: ${error.message}`);
+    }
+  });
+
+  bot.action('admin_songs', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.answerCbQuery('У вас нет доступа');
+    }
+    
+    try {
+      const pendingSongs = await Song.find({ status: 'pending' }).limit(10).lean();
+      const processingSongs = await Song.find({ status: 'processing' }).limit(10).lean();
+      
+      let text = '🎵 Управление песнями:\n\n';
+      
+      if (pendingSongs.length > 0) {
+        text += `⏳ В очереди (${pendingSongs.length}):\n`;
+        pendingSongs.forEach((song, i) => {
+          text += `${i + 1}. ${song.prompt?.substring(0, 50) || 'без prompt'}...\n`;
+        });
+      }
+      
+      if (processingSongs.length > 0) {
+        text += `\n🔄 В процессе (${processingSongs.length}):\n`;
+        processingSongs.forEach((song, i) => {
+          text += `${i + 1}. ${song.prompt?.substring(0, 50) || 'без prompt'}...\n`;
+        });
+      }
+      
+      if (pendingSongs.length === 0 && processingSongs.length === 0) {
+        text += 'Нет песен в очереди или в процессе';
+      }
+      
+      return ctx.editMessageText(text, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🔙 Назад', callback_data: 'admin_stats' }]
+          ]
+        }
+      });
+    } catch (error) {
+      console.error('Admin songs error:', error);
+      return ctx.answerCbQuery(`Ошибка: ${error.message}`);
+    }
+  });
+
+  bot.action('admin_users', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.answerCbQuery('У вас нет доступа');
+    }
+    
+    try {
+      const totalUsers = await User.countDocuments();
+      const users = await User.find().sort({ created_at: -1 }).limit(10).lean();
+      
+      let text = `👥 Пользователи (всего: ${totalUsers}):\n\n`;
+      
+      users.forEach((user, i) => {
+        text += `${i + 1}. ${user.first_name || ''} @${user.username || 'нет'} (ID: ${user.telegram_id})\n`;
+        text += `   Кредиты: ${user.credits} + ${user.bonus_credits} бонус\n`;
+        text += `   Дата: ${new Date(user.created_at).toLocaleDateString()}\n\n`;
+      });
+      
+      return ctx.editMessageText(text, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🔙 Назад', callback_data: 'admin_stats' }]
+          ]
+        }
+      });
+    } catch (error) {
+      console.error('Admin users error:', error);
+      return ctx.answerCbQuery(`Ошибка: ${error.message}`);
     }
   });
 
