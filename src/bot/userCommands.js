@@ -65,7 +65,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
   if (!balance || balance.total < 1) {
     songWizard.clearSession(userId);
-    return sendNoCreditsMessage(ctx, '❌ Недостаточно кредитов. Сессия отменена.');
+    return sendNoCreditsMessage(ctx, '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nКупите токены, чтобы продолжить!');
   }
 
   const { step, mode, instrumental, style, title, prompt, model } = session;
