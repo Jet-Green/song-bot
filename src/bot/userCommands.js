@@ -5,18 +5,36 @@ import { songWizard, STEPS, STYLES } from '../services/songWizard.js';
 import Song from '../models/Song.js';
 import User from '../models/User.js';
 
+const getBuyCreditsKeyboard = () => {
+  const packages = Object.values(CREDIT_PACKAGES);
+  return {
+    inline_keyboard: packages.map(pkg => [
+      { text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${pkg.credits}` }
+    ])
+  };
+};
+
+const sendNoCreditsMessage = async (ctx, message = '❌ Недостаточно кредитов. Купите кредиты для генерации.') => {
+  await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
+  return ctx.reply(message, { reply_markup: getBuyCreditsKeyboard() });
+};
+
 const createSong = async (ctx, prompt, mainKeyboard) => {
   const userId = ctx.from.id;
 
   const balance = await getUserBalance(userId);
   if (!balance || balance.total < 1) {
-    await logEvent(userId, EVENTS.PAYWALL_OPEN);
-    return ctx.reply('❌ Недостаточно кредитов. Купите кредиты для генерации.', mainKeyboard);
+    return sendNoCreditsMessage(ctx);
   }
 
   const deductResult = await deductCredit(userId);
   if (!deductResult.success) {
     return ctx.reply('Ошибка при списании кредитов');
+  }
+
+  const newBalance = await getUserBalance(userId);
+  if (newBalance && newBalance.total === 0) {
+    await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
   }
 
   const user = await User.findOne({ telegram_id: userId });
@@ -52,8 +70,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
   if (!balance || balance.total < 1) {
     songWizard.clearSession(userId);
-    await logEvent(userId, EVENTS.PAYWALL_OPEN);
-    return ctx.reply('❌ Недостаточно кредитов. Сессия отменена.', mainKeyboard);
+    return sendNoCreditsMessage(ctx, '❌ Недостаточно кредитов. Сессия отменена.');
   }
 
   const { step, mode, instrumental, style, title, prompt, model } = session;
@@ -67,6 +84,11 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     }
 
     await deductCredit(userId);
+    
+    const newBalance = await getUserBalance(userId);
+    if (newBalance && newBalance.total === 0) {
+      await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
+    }
     
     const song = await Song.create({
       user_id: user._id,
@@ -116,6 +138,11 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     session.model = modelId;
 
     await deductCredit(userId);
+
+    const newBalance = await getUserBalance(userId);
+    if (newBalance && newBalance.total === 0) {
+      await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
+    }
 
     const song = await Song.create({
       user_id: user._id,

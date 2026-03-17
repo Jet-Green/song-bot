@@ -135,12 +135,12 @@ export const setupAdminCommands = (bot) => {
     }
     
     return ctx.reply(
-      'Введите данные в формате:\n/telegram_id количество\n\nНапример: /123456789 100',
+      'Введите данные в формате:\n/add_bonus telegram_id количество\n\nНапример: /add_bonus 123456789 100',
       { reply_markup: backKeyboard.reply_markup }
     );
   });
 
-  bot.command('addbonus', async (ctx) => {
+  bot.command('add_bonus', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply('Нет доступа');
     }
@@ -148,7 +148,7 @@ export const setupAdminCommands = (bot) => {
     const args = ctx.message.text.split(' ').slice(1);
     
     if (args.length < 2) {
-      return ctx.reply('Использование: /addbonus <telegram_id> <количество>');
+      return ctx.reply('Использование: /add_bonus <telegram_id> <количество>');
     }
     
     const telegramId = Number(args[0]);
