@@ -14,9 +14,23 @@ const getBuyCreditsKeyboard = () => {
   };
 };
 
-const sendNoCreditsMessage = async (ctx, message = '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nКупите токены, чтобы продолжить!') => {
+const sendNoCreditsMessage = async (ctx, message = '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nЧтобы получить 1 токен — пригласите друга!') => {
   await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
-  return ctx.reply(message, { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
+  
+  const userId = ctx.from.id;
+  const botUsername = ctx.botInfo?.username || 'your_bot';
+  const referralLink = `https://t.me/${botUsername}?start=${userId}`;
+  
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: '👥 Пригласить друга', url: referralLink }],
+      ...Object.entries(CREDIT_PACKAGES).map(([credits, pkg]) => 
+        [{ text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${credits}` }]
+      )
+    ]
+  };
+  
+  return ctx.reply(message, { parse_mode: 'Markdown', reply_markup: keyboard });
 };
 
 const createSong = async (ctx, prompt, mainKeyboard) => {
