@@ -164,15 +164,20 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       }
     }
     
-    await findOrCreateUser(id, username, first_name, last_name, referralSource);
+    const { user, isNewUser } = await findOrCreateUser(id, username, first_name, last_name, referralSource);
 
-    const welcomeText = `🎤 *Добро пожаловать в AI Song Bot!*
+    let bonusMessage = '';
+    if (isNewUser) {
+      bonusMessage = `\n\n🎁 *Вы получили 2 бонусных токена!*\n\n` +
+        `У вас есть *7 дней*, чтобы использовать их.\n` +
+        `Один токен = 1 песня.\n\n` +
+        `Спешите, время ограничено! ⏰`;
+    }
 
-Я могу написать и спеть для вас песню на любую тему.
-
-Выберите действие из меню ниже или просто напишите текст для генерации.
-
-*Стоимость генерации: 1 кредит*`;
+    const welcomeText = `🎤 *Добро пожаловать в AI Song Bot!*\n\n` +
+      `Я могу написать и спеть для вас песню на любую тему.\n\n` +
+      `Выберите действие из меню ниже или просто напишите текст для генерации.\n\n` +
+      `*Стоимость генерации: 1 кредит*${bonusMessage}`;
 
     return ctx.replyWithMarkdown(welcomeText, mainKeyboard);
   });

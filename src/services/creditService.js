@@ -13,6 +13,7 @@ export const EVENTS = {
 
 export const findOrCreateUser = async (telegramId, username, firstName, lastName, referralSource = null) => {
   let user = await User.findOne({ telegram_id: telegramId });
+  const isNewUser = !user;
   
   if (!user) {
     user = await User.create({
@@ -20,7 +21,8 @@ export const findOrCreateUser = async (telegramId, username, firstName, lastName
       username,
       first_name: firstName,
       last_name: lastName,
-      referral_source: referralSource
+      referral_source: referralSource,
+      bonus_credits: 2
     });
     await Event.create({
       user_id: user._id,
@@ -28,7 +30,7 @@ export const findOrCreateUser = async (telegramId, username, firstName, lastName
     });
   }
   
-  return user;
+  return { user, isNewUser };
 };
 
 export const getUserBalance = async (telegramId) => {
