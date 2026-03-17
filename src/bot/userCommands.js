@@ -14,9 +14,9 @@ const getBuyCreditsKeyboard = () => {
   };
 };
 
-const sendNoCreditsMessage = async (ctx, message = '❌ Недостаточно кредитов. Купите кредиты для генерации.') => {
+const sendNoCreditsMessage = async (ctx, message = '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nКупите токены, чтобы продолжить!') => {
   await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
-  return ctx.reply(message, { reply_markup: getBuyCreditsKeyboard() });
+  return ctx.reply(message, { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
 };
 
 const createSong = async (ctx, prompt, mainKeyboard) => {
@@ -30,11 +30,6 @@ const createSong = async (ctx, prompt, mainKeyboard) => {
   const deductResult = await deductCredit(userId);
   if (!deductResult.success) {
     return ctx.reply('Ошибка при списании кредитов');
-  }
-
-  const newBalance = await getUserBalance(userId);
-  if (newBalance && newBalance.total === 0) {
-    await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
   }
 
   const user = await User.findOne({ telegram_id: userId });
@@ -91,11 +86,6 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
     await deductCredit(userId);
     
-    const newBalance = await getUserBalance(userId);
-    if (newBalance && newBalance.total === 0) {
-      await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
-    }
-
     await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
     
     const song = await Song.create({
@@ -146,11 +136,6 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     session.model = modelId;
 
     await deductCredit(userId);
-
-    const newBalance = await getUserBalance(userId);
-    if (newBalance && newBalance.total === 0) {
-      await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
-    }
 
     await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
 
