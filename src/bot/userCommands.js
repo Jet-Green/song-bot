@@ -77,7 +77,13 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
   if (step === STEPS.LYRICS && !ctx.callbackQuery) {
     session.prompt = ctx.message.text;
-    
+
+    const balance = await getUserBalance(userId);
+    if (!balance || balance.total < 1) {
+      songWizard.clearSession(userId);
+      return sendNoCreditsMessage(ctx);
+    }
+
     const user = await User.findOne({ telegram_id: userId });
     if (!user) {
       return ctx.reply('Пользователь не найден');
@@ -89,6 +95,8 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     if (newBalance && newBalance.total === 0) {
       await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
     }
+
+    await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
     
     const song = await Song.create({
       user_id: user._id,
@@ -143,6 +151,8 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     if (newBalance && newBalance.total === 0) {
       await ctx.reply('⚠️ *Внимание!*\n\nВаши токены закончились. Приобретите кредиты для продолжения.', { parse_mode: 'Markdown', reply_markup: getBuyCreditsKeyboard() });
     }
+
+    await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
 
     const song = await Song.create({
       user_id: user._id,
