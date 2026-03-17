@@ -292,6 +292,21 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     );
   });
 
+  bot.hears('👥 Пригласить друга', async (ctx) => {
+    const userId = ctx.from.id;
+    const botUsername = ctx.botInfo.username;
+    const referralLink = `https://t.me/${botUsername}?start=${userId}`;
+    
+    return ctx.reply(
+      `👥 *Пригласить друга*\n\n` +
+      `Поделитесь ссылкой с друзьями:\n\n` +
+      `${referralLink}\n\n` +
+      `За каждого приглашённого друга вы получите *1 кредит*! 🎁\n\n` +
+      `Друг получит *2 бонусных токена* при регистрации.`,
+      { parse_mode: 'Markdown' }
+    );
+  });
+
   bot.on('callback_query', async (ctx) => {
     const query = ctx.callbackQuery;
     const data = query.data;
