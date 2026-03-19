@@ -30,26 +30,29 @@ export const findOrCreateUser = async (telegramId, username, firstName, lastName
       event_name: EVENTS.START_BOT
     });
 
-    if (referralSource) {
-      const referrer = await User.findOne({ telegram_id: Number(referralSource) });
-      if (referrer) {
-        referrer.credits += 1;
-        await referrer.save();
-        await Event.create({
-          user_id: referrer._id,
-          event_name: EVENTS.REFERRAL_BONUS,
-          credits: 1,
-          meta: { referred_user_id: user._id.toString() }
-        });
-        try {
-          const { bot } = await import('../bot/index.js');
-          await bot.telegram.sendMessage(
-            referrer.telegram_id,
-            `🎉 *Новый друг присоединился!*\n\nВам начислен 1 кредит за приглашение.`,
-            { parse_mode: 'Markdown' }
-          );
-        } catch (e) {
-          console.log('Could not notify referrer:', e.message);
+    if (referralSource && referralSource.trim()) {
+      const referrerId = Number(referralSource);
+      if (!isNaN(referrerId) && referrerId > 0) {
+        const referrer = await User.findOne({ telegram_id: referrerId });
+        if (referrer) {
+          referrer.credits += 1;
+          await referrer.save();
+          await Event.create({
+            user_id: referrer._id,
+            event_name: EVENTS.REFERRAL_BONUS,
+            credits: 1,
+            meta: { referred_user_id: user._id.toString() }
+          });
+          try {
+            const { bot } = await import('../bot/index.js');
+            await bot.telegram.sendMessage(
+              referrer.telegram_id,
+              `🎉 *Новый друг присоединился!*\n\nВам начислен 1 кредит за приглашение.`,
+              { parse_mode: 'Markdown' }
+            );
+          } catch (e) {
+            console.log('Could not notify referrer:', e.message);
+          }
         }
       }
     }

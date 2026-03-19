@@ -3,8 +3,7 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
   telegram_id: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
   },
   username: String,
   first_name: String,
