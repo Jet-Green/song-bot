@@ -323,7 +323,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     
     if (data === 'invite_friend_no_credits') {
       const userId = ctx.from.id;
-      const botUsername = ctx.botInfo?.username || 'song_firetechno_bot';
+      const botUsername = ctx.botInfo?.username || 'avto_bit_bot';
       const referralLink = `https://t.me/${botUsername}?start=${userId}`;
       
       return ctx.reply(
