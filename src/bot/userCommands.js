@@ -4,29 +4,14 @@ import { generateMusic } from '../services/sunoService.js';
 import { songWizard, STEPS, STYLES } from '../services/songWizard.js';
 import Song from '../models/Song.js';
 import User from '../models/User.js';
+import { MESSAGES, KEYBOARDS } from './messages.js';
 
-const getBuyCreditsKeyboard = () => {
-  const packages = Object.values(CREDIT_PACKAGES);
-  return {
-    inline_keyboard: packages.map(pkg => [
-      { text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${pkg.credits}` }
-    ])
-  };
-};
-
-const sendNoCreditsMessage = async (ctx, message = '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nЧтобы получить 1 токен — пригласите друга!') => {
+const sendNoCreditsMessage = async (ctx) => {
   await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
-  
-  const keyboard = {
-    inline_keyboard: [
-      [{ text: '👥 Пригласить друга', callback_data: 'invite_friend_no_credits' }],
-      ...Object.entries(CREDIT_PACKAGES).map(([credits, pkg]) => 
-        [{ text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${credits}` }]
-      )
-    ]
-  };
-  
-  return ctx.reply(message, { parse_mode: 'Markdown', reply_markup: keyboard });
+  return ctx.reply(MESSAGES.NO_CREDITS, { 
+    parse_mode: 'Markdown', 
+    reply_markup: KEYBOARDS.inviteNoCredits(CREDIT_PACKAGES) 
+  });
 };
 
 const createSong = async (ctx, prompt, mainKeyboard) => {
@@ -39,12 +24,12 @@ const createSong = async (ctx, prompt, mainKeyboard) => {
 
   const deductResult = await deductCredit(userId);
   if (!deductResult.success) {
-    return ctx.reply('Ошибка при списании кредитов');
+    return ctx.reply(MESSAGES.ERROR_DEDUCT);
   }
 
   const user = await User.findOne({ telegram_id: userId });
   if (!user) {
-    return ctx.reply('Пользователь не найден');
+    return ctx.reply(MESSAGES.USER_NOT_FOUND);
   }
 
   const song = await Song.create({
@@ -60,10 +45,10 @@ const createSong = async (ctx, prompt, mainKeyboard) => {
   if (!result.success) {
     user.credits += 1;
     await user.save();
-    return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
+    return ctx.reply(MESSAGES.ERROR_GENERATION(result.error), mainKeyboard);
   }
 
-  return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
+  return ctx.reply(MESSAGES.QUEUE, mainKeyboard);
 };
 
 const processWizardStep = async (ctx, userId, mainKeyboard) => {
@@ -75,7 +60,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
   if (!balance || balance.total < 1) {
     songWizard.clearSession(userId);
-    return sendNoCreditsMessage(ctx, '😢 *Не хватает токенов...*\n\nДля создания песни нужен 1 токен.\nКупите токены, чтобы продолжить!');
+    return sendNoCreditsMessage(ctx);
   }
 
   const { step, mode, instrumental, style, title, prompt, model } = session;
@@ -91,12 +76,12 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
     const user = await User.findOne({ telegram_id: userId });
     if (!user) {
-      return ctx.reply('Пользователь не найден');
+      return ctx.reply(MESSAGES.USER_NOT_FOUND);
     }
 
     await deductCredit(userId);
     
-    await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
+    await ctx.reply(MESSAGES.GENERATING, mainKeyboard);
     
     const song = await Song.create({
       user_id: user._id,
@@ -126,10 +111,10 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     if (!result.success) {
       user.credits += 1;
       await user.save();
-      return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
+      return ctx.reply(MESSAGES.ERROR_GENERATION(result.error), mainKeyboard);
     }
     
-    return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
+    return ctx.reply(MESSAGES.QUEUE, mainKeyboard);
   }
 
   if (step === STEPS.TITLE && !ctx.callbackQuery) {
@@ -147,7 +132,7 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
 
     await deductCredit(userId);
 
-    await ctx.reply('✨ Создаём вашу песню... Это может занять пару минут.\n\n💡 Вы получите уведомление, когда песня будет готова!', mainKeyboard);
+    await ctx.reply(MESSAGES.GENERATING, mainKeyboard);
 
     const song = await Song.create({
       user_id: user._id,
@@ -175,10 +160,10 @@ const processWizardStep = async (ctx, userId, mainKeyboard) => {
     if (!result.success) {
       user.credits += 1;
       await user.save();
-      return ctx.reply(`❌ Ошибка генерации: ${result.error}`, mainKeyboard);
+      return ctx.reply(MESSAGES.ERROR_GENERATION(result.error), mainKeyboard);
     }
 
-    return ctx.reply('🎵 Ваша песня поставлена в очередь на генерацию!\n⏳ Обычно это занимает 1-2 минуты.', mainKeyboard);
+    return ctx.reply(MESSAGES.QUEUE, mainKeyboard);
   }
 
   return false;
@@ -198,18 +183,9 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     
     const { user, isNewUser } = await findOrCreateUser(id, username, first_name, last_name, referralSource);
 
-    let bonusMessage = '';
-    if (isNewUser) {
-      bonusMessage = `\n\n🎁 *Вы получили 2 бонусных токена!*\n\n` +
-        `У вас есть *7 дней*, чтобы использовать их.\n` +
-        `Один токен = 1 песня.\n\n` +
-        `Спешите, время ограничено! ⏰`;
-    }
-
-    const welcomeText = `🎤 *Добро пожаловать в AI Song Bot!*\n\n` +
-      `Я могу написать и спеть для вас песню на любую тему.\n\n` +
-      `Выберите действие из меню ниже или просто напишите текст для генерации.\n\n` +
-      `*Стоимость генерации: 1 кредит*${bonusMessage}`;
+    const welcomeText = isNewUser 
+      ? MESSAGES.WELCOME_NEW_USER(MESSAGES.NEW_USER_BONUS)
+      : MESSAGES.WELCOME;
 
     return ctx.replyWithMarkdown(welcomeText, mainKeyboard);
   });
@@ -217,30 +193,19 @@ export const setupUserCommands = (bot, mainKeyboard) => {
   bot.command('balance', async (ctx) => {
     const balance = await getUserBalance(ctx.from.id);
     if (!balance) {
-      return ctx.reply('Пользователь не найден');
+      return ctx.reply(MESSAGES.USER_NOT_FOUND);
     }
 
-    return ctx.reply(
-      `💰 Ваш баланс:\n\n` +
-      `Кредиты: ${balance.credits}\n` +
-      `Бонусные кредиты: ${balance.bonus_credits}\n\n` +
-      `Всего: ${balance.total}`,
-      mainKeyboard
-    );
+    return ctx.reply(MESSAGES.BALANCE(balance.credits, balance.bonus_credits, balance.total), mainKeyboard);
   });
 
   bot.hears('💰 Мой баланс', async (ctx) => {
     const balance = await getUserBalance(ctx.from.id);
     if (!balance) {
-      return ctx.reply('Пользователь не найден');
+      return ctx.reply(MESSAGES.USER_NOT_FOUND);
     }
 
-    return ctx.reply(
-      `💰 Ваш баланс:\n\n` +
-      `Кредиты: ${balance.credits}\n` +
-      `Бонусные кредиты: ${balance.bonus_credits}\n\n` +
-      `Всего: ${balance.total}`
-    );
+    return ctx.reply(MESSAGES.BALANCE(balance.credits, balance.bonus_credits, balance.total));
   });
 
   bot.hears('🎵 Сгенерировать песню', async (ctx) => {
@@ -251,15 +216,15 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
   bot.hears('📜 Мои песни', async (ctx) => {
     const user = await User.findOne({ telegram_id: ctx.from.id });
-    if (!user) return ctx.reply('Пользователь не найден');
+    if (!user) return ctx.reply(MESSAGES.USER_NOT_FOUND);
 
     const songs = await Song.find({ user_id: user._id }).sort({ created_at: -1 }).limit(5);
 
     if (songs.length === 0) {
-      return ctx.reply('У вас пока нет песен');
+      return ctx.reply(MESSAGES.NO_SONGS);
     }
 
-    let text = '📜 *Ваши последние песни:*\n\n';
+    let text = MESSAGES.SONG_LIST_TITLE + '\n\n';
     songs.forEach((song, i) => {
       const statusEmoji = song.status === 'done' ? '✅' : song.status === 'processing' ? '⏳' : song.status === 'error' ? '❌' : '⏸';
       const audioLink = song.audio_url ? `\n🔊 ${song.audio_url}` : '';
@@ -274,32 +239,14 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     
     const packages = Object.values(CREDIT_PACKAGES);
     
-    const keyboard = {
-      inline_keyboard: packages.map(pkg => [
-        { text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${pkg.credits}` }
-      ])
-    };
-    
-    return ctx.reply(
-      '💎 *Покупка кредитов:*\n\n' +
-      'Выберите пакет для оплаты:',
-      { 
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      }
-    );
+    return ctx.reply(MESSAGES.BUY_CREDITS, { 
+      parse_mode: 'Markdown',
+      reply_markup: KEYBOARDS.buyCredits(packages)
+    });
   });
 
   bot.hears('📄 Документы', async (ctx) => {
-    return ctx.reply(
-      '📋 *Документы сервиса «AI Песни»*\n\n' +
-      'Пожалуйста, ознакомьтесь с официальными документами сервиса:\n\n' +
-      '• [Публичная оферта](https://matroxxx.github.io/song-firetechno-bot/offer.html)\n\n' +
-      '• [Политика конфиденциальности](https://matroxxx.github.io/song-firetechno-bot/privacy.html)\n\n' +
-      '• [Информация о сервисе](https://matroxxx.github.io/song-firetechno-bot/index.html)\n\n' +
-      'Оплачивая подписку и используя бот, вы подтверждаете согласие с условиями публичной оферты и политикой обработки персональных данных.',
-      { parse_mode: 'Markdown' }
-    );
+    return ctx.reply(MESSAGES.DOCUMENTS, { parse_mode: 'Markdown' });
   });
 
   bot.hears('👥 Пригласить друга', async (ctx) => {
@@ -307,14 +254,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     const botUsername = ctx.botInfo.username;
     const referralLink = `https://t.me/${botUsername}?start=${userId}`;
     
-    return ctx.reply(
-      `👥 *Пригласить друга*\n\n` +
-      `Поделитесь ссылкой с друзьями:\n\n` +
-      `${referralLink}\n\n` +
-      `За каждого приглашённого друга вы получите *1 кредит*! 🎁\n\n` +
-      `Друг получит *2 бонусных токена* при регистрации.`,
-      { parse_mode: 'Markdown' }
-    );
+    return ctx.reply(MESSAGES.INVITE_FRIEND(referralLink), { parse_mode: 'Markdown' });
   });
 
   bot.on('callback_query', async (ctx) => {
@@ -326,51 +266,35 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       const botUsername = ctx.botInfo?.username || 'avto_bit_bot';
       const referralLink = `https://t.me/${botUsername}?start=${userId}`;
       
-      return ctx.reply(
-        `👥 *Пригласить друга*\n\n` +
-        `Поделитесь ссылкой с друзьями:\n\n` +
-        `${referralLink}\n\n` +
-        `За каждого приглашённого друга вы получите *1 кредит*! 🎁\n\n` +
-        `Друг получит *2 бонусных токена* при регистрации.`,
-        { parse_mode: 'Markdown' }
-      );
+      return ctx.reply(MESSAGES.INVITE_FRIEND(referralLink), { parse_mode: 'Markdown' });
     }
     
     if (data.startsWith('buy_credits_')) {
       const creditsAmount = parseInt(data.replace('buy_credits_', ''));
       const userId = ctx.from.id;
       
-      await ctx.answerCbQuery('Подготовка платежа...');
+      await ctx.answerCbQuery(MESSAGES.PAYMENT_PREPARING);
       
       try {
         const payment = await generatePaymentLink(userId, creditsAmount);
         
-        const successKeyboard = {
-          inline_keyboard: [
-            [{ text: '💳 Оплатить', url: payment.url }],
-            [{ text: '🔄 Проверить оплату', callback_data: `check_payment_${payment.invId}` }]
-          ]
-        };
-        
         await ctx.editMessageText(
-          `💎 *Покупка ${CREDIT_PACKAGES[creditsAmount].name}*\n\n` +
-          `💰 Сумма: *${payment.price}₽*\n\n` +
-          `Нажмите кнопку ниже для оплаты:`,
+          MESSAGES.BUY_PACKAGE(CREDIT_PACKAGES[creditsAmount].name, payment.price),
           { 
             parse_mode: 'Markdown',
-            reply_markup: successKeyboard
+            reply_markup: KEYBOARDS.paymentSuccess(payment.url, payment.invId)
           }
         );
       } catch (error) {
         console.error('Payment error:', error);
-        await ctx.answerCbQuery('Ошибка при создании платежа');
+        await ctx.answerCbQuery(MESSAGES.PAYMENT_ERROR);
       }
       
       return;
     }
     
     if (data.startsWith('check_payment_')) {
-      await ctx.answerCbQuery('Проверка статуса...');
+      await ctx.answerCbQuery(MESSAGES.PAYMENT_CHECKING);
       return;
     }
 
@@ -382,7 +306,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
 
     if (data === 'wizard_cancel') {
       songWizard.clearSession(userId);
-      return ctx.editMessageText('❌ Сессия отменена.');
+      return ctx.editMessageText(MESSAGES.WIZARD_CANCEL);
     }
 
     if (data.startsWith('wizard_mode_')) {
@@ -422,21 +346,21 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       const songId = data.replace('retry_', '');
       
       try {
-        await ctx.answerCbQuery('Пробуем снова...');
+        await ctx.answerCbQuery(MESSAGES.RETRY_ANSWER);
         
         const song = await Song.findById(songId);
         if (!song) {
-          return ctx.editMessageText('Песня не найдена');
+          return ctx.editMessageText(MESSAGES.SONG_NOT_FOUND);
         }
         
         const user = await User.findOne({ telegram_id: userId });
         if (!user) {
-          return ctx.editMessageText('Пользователь не найден');
+          return ctx.editMessageText(MESSAGES.USER_NOT_FOUND);
         }
         
         const balance = await getUserBalance(userId);
         if (!balance || balance.total < 1) {
-          return ctx.editMessageText('❌ Недостаточно кредитов для повторной генерации.');
+          return ctx.editMessageText(MESSAGES.NOT_ENOUGH_CREDITS_RETRY);
         }
         
         await deductCredit(userId);
@@ -457,13 +381,13 @@ export const setupUserCommands = (bot, mainKeyboard) => {
         if (!result.success) {
           user.credits += 1;
           await user.save();
-          return ctx.editMessageText(`❌ Ошибка генерации: ${result.error}`);
+          return ctx.editMessageText(MESSAGES.ERROR_GENERATION(result.error));
         }
         
-        return ctx.editMessageText('🎵 Песня поставлена в очередь на генерацию повторно!\n⏳ Обычно это занимает 1-2 минуты.');
+        return ctx.editMessageText(MESSAGES.RETRY_SUCCESS);
       } catch (error) {
         console.error('Retry error:', error);
-        return ctx.editMessageText(`❌ Ошибка: ${error.message}`);
+        return ctx.editMessageText(MESSAGES.RETRY_ERROR(error.message));
       }
     }
 
