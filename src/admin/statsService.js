@@ -3,6 +3,10 @@ import User from '../models/User.js';
 import Song from '../models/Song.js';
 import Payment from '../models/Payment.js';
 
+const MSK_OFFSET = 3 * 60 * 60 * 1000;
+
+const toMsk = (date) => new Date(date.getTime() + MSK_OFFSET);
+
 export const EVENTS = {
   START_BOT: 'start_bot',
   SONG_REQUESTED: 'song_requested',
@@ -132,8 +136,8 @@ export const getTotalStats = async () => {
   };
 };
 
-export const getHourlyStats = async (date = new Date()) => {
-  const dayStart = new Date(date);
+export const getHourlyStats = async (date = toMsk(new Date())) => {
+  const dayStart = toMsk(date);
   dayStart.setHours(0, 0, 0, 0);
   
   const dayEnd = new Date(dayStart);
@@ -159,8 +163,8 @@ export const getHourlyStats = async (date = new Date()) => {
   return stats;
 };
 
-export const getRegistrationsByHours = async (date = new Date()) => {
-  const dayStart = new Date(date);
+export const getRegistrationsByHours = async (date = toMsk(new Date())) => {
+  const dayStart = toMsk(date);
   dayStart.setHours(0, 0, 0, 0);
   
   const dayEnd = new Date(dayStart);
