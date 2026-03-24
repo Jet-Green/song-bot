@@ -1,5 +1,5 @@
 import config from '../config/index.js';
-import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats, getFunnelByDays, getFunnelByHours } from './statsService.js';
+import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats, getFunnelByDays, getFunnelByHours, getRegistrationsStats, getRegistrationsByHours } from './statsService.js';
 import User from '../models/User.js';
 import Song from '../models/Song.js';
 import { getMusicDetails } from '../services/sunoService.js';
@@ -50,8 +50,8 @@ export const setupAdminCommands = (bot) => {
     let stats, title;
     
     if (messageText.includes('Пользователи')) {
-      stats = await getActiveUsersStats(7);
-      title = MESSAGES.ACTIVE_USERS_WEEK;
+      stats = await getRegistrationsStats(7);
+      title = '👥 Регистрации за неделю:';
     } else {
       stats = await getDailyStats(7);
       title = MESSAGES.SONGS_WEEK;
@@ -71,15 +71,16 @@ export const setupAdminCommands = (bot) => {
     }
     
     const messageText = ctx.message.text;
-    let title;
+    let title, stats;
     
     if (messageText.includes('Пользователи')) {
-      title = MESSAGES.USERS_HOURLY;
+      title = '👥 Регистрации по часам за сегодня:';
+      stats = await getRegistrationsByHours();
     } else {
       title = MESSAGES.SONGS_HOURLY;
+      stats = await getHourlyStats();
     }
     
-    const stats = await getHourlyStats();
     const today = new Date().toISOString().split('T')[0];
     const total = stats.reduce((sum, s) => sum + s.count, 0);
     

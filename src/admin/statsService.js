@@ -91,6 +91,30 @@ export const getActiveUsersStats = async (days = 7) => {
   return stats;
 };
 
+export const getRegistrationsStats = async (days = 7) => {
+  const now = new Date();
+  const stats = [];
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const dayStart = new Date(now);
+    dayStart.setDate(dayStart.getDate() - i);
+    dayStart.setHours(0, 0, 0, 0);
+    
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    
+    const count = await Event.countDocuments({
+      event_name: EVENTS.START_BOT,
+      event_time: { $gte: dayStart, $lt: dayEnd }
+    });
+    
+    const dateStr = dayStart.toISOString().split('T')[0];
+    stats.push({ date: dateStr, count });
+  }
+  
+  return stats;
+};
+
 export const getTotalStats = async () => {
   const totalUsers = await User.countDocuments();
   const totalSongs = await Song.countDocuments();
@@ -126,6 +150,33 @@ export const getHourlyStats = async (date = new Date()) => {
     
     const count = await Event.countDocuments({
       event_name: EVENTS.SONG_REQUESTED,
+      event_time: { $gte: hourStart, $lt: hourEnd }
+    });
+    
+    stats.push({ hour: `${hour.toString().padStart(2, '0')}:00`, count });
+  }
+  
+  return stats;
+};
+
+export const getRegistrationsByHours = async (date = new Date()) => {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  
+  const stats = [];
+  
+  for (let hour = 0; hour < 24; hour++) {
+    const hourStart = new Date(dayStart);
+    hourStart.setHours(hour);
+    
+    const hourEnd = new Date(hourStart);
+    hourEnd.setHours(hour + 1);
+    
+    const count = await Event.countDocuments({
+      event_name: EVENTS.START_BOT,
       event_time: { $gte: hourStart, $lt: hourEnd }
     });
     
