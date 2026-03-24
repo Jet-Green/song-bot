@@ -183,9 +183,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     
     const { user, isNewUser } = await findOrCreateUser(id, username, first_name, last_name, referralSource);
 
-    const welcomeText = isNewUser 
-      ? MESSAGES.WELCOME_NEW_USER(MESSAGES.NEW_USER_BONUS)
-      : MESSAGES.WELCOME;
+    const welcomeText = MESSAGES.WELCOME;
 
     return ctx.replyWithMarkdown(welcomeText, mainKeyboard);
   });

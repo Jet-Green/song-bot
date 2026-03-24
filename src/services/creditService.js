@@ -22,8 +22,7 @@ export const findOrCreateUser = async (telegramId, username, firstName, lastName
       username,
       first_name: firstName,
       last_name: lastName,
-      referral_source: referralSource,
-      bonus_credits: 2
+      referral_source: referralSource
     });
     await Event.create({
       user_id: user._id,

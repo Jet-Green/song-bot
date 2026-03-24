@@ -16,6 +16,9 @@ export const MESSAGES = {
   USERS_HOURLY: '👥 Пользователи по часам за сегодня:',
   SONGS_HOURLY: '🎵 Песни по часам за сегодня:',
 
+  FUNNEL_DAYS: '📊 Воронка по дням:',
+  FUNNEL_HOURS: '📊 Воронка по часам:',
+
   NO_DATA: 'Нет данных',
 
   TOTAL_TODAY: (total) => `📊 Итого: ${total}`,
@@ -73,7 +76,14 @@ export const KEYBOARDS = {
   main: [
     ['👥 Пользователи'],
     ['🎵 Песни'],
+    ['📊 Воронка'],
     ['💰 Начислить бонусы']
+  ],
+
+  funnel: [
+    ['📅 По дням'],
+    ['⏰ По часам'],
+    ['🔙 Назад']
   ],
 
   period: [

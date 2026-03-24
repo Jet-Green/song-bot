@@ -134,3 +134,90 @@ export const getHourlyStats = async (date = new Date()) => {
   
   return stats;
 };
+
+const EVENT_LIST = [
+  'start_bot',
+  'song_requested',
+  'paywll_open',
+  'paywall_open',
+  'song_generated',
+  'song_failed'
+];
+
+export const getFunnelByDays = async (days = 7) => {
+  const now = new Date();
+  const stats = [];
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const dayStart = new Date(now);
+    dayStart.setDate(dayStart.getDate() - i);
+    dayStart.setHours(0, 0, 0, 0);
+    
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    
+    const events = await Event.aggregate([
+      {
+        $match: {
+          event_name: { $in: EVENT_LIST },
+          event_time: { $gte: dayStart, $lt: dayEnd }
+        }
+      },
+      {
+        $group: {
+          _id: '$event_name',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const dayStats = { date: dayStart.toISOString().split('T')[0] };
+    events.forEach(e => {
+      dayStats[e._id] = e.count;
+    });
+    stats.push(dayStats);
+  }
+  
+  return stats;
+};
+
+export const getFunnelByHours = async (date = new Date()) => {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  
+  const stats = [];
+  
+  for (let hour = 0; hour < 24; hour++) {
+    const hourStart = new Date(dayStart);
+    hourStart.setHours(hour);
+    
+    const hourEnd = new Date(hourStart);
+    hourEnd.setHours(hour + 1);
+    
+    const events = await Event.aggregate([
+      {
+        $match: {
+          event_name: { $in: EVENT_LIST },
+          event_time: { $gte: hourStart, $lt: hourEnd }
+        }
+      },
+      {
+        $group: {
+          _id: '$event_name',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const hourStats = { hour: `${hour.toString().padStart(2, '0')}:00` };
+    events.forEach(e => {
+      hourStats[e._id] = e.count;
+    });
+    stats.push(hourStats);
+  }
+  
+  return stats;
+};

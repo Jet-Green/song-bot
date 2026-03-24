@@ -1,5 +1,5 @@
 import config from '../config/index.js';
-import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats } from './statsService.js';
+import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats, getFunnelByDays, getFunnelByHours } from './statsService.js';
 import User from '../models/User.js';
 import Song from '../models/Song.js';
 import { getMusicDetails } from '../services/sunoService.js';
@@ -101,6 +101,59 @@ export const setupAdminCommands = (bot) => {
     
     return ctx.reply(MESSAGES.ADMIN_PANEL(stats), {
       reply_markup: Markup.keyboard(KEYBOARDS.main).resize().reply_markup
+    });
+  });
+
+  bot.hears('📊 Воронка', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    return ctx.reply(MESSAGES.SELECT_PERIOD, {
+      reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
+    });
+  });
+
+  bot.hears('📅 По дням', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const stats = await getFunnelByDays(7);
+    
+    let text = MESSAGES.FUNNEL_DAYS + '\n\n';
+    text += 'Дата       | start | request | paywall | generated\n';
+    text += '------------|-------|---------|---------|-----------\n';
+    
+    stats.forEach(s => {
+      text += `${s.date} | ${s.start_bot || 0} | ${s.song_requested || 0} | ${(s.paywll_open || 0) + (s.paywall_open || 0)} | ${s.song_generated || 0}\n`;
+    });
+    
+    return ctx.reply(text, {
+      reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
+    });
+  });
+
+  bot.hears('⏰ По часам', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const stats = await getFunnelByHours();
+    
+    let text = MESSAGES.FUNNEL_HOURS + ` (${today}):\n\n`;
+    text += 'Время | start | request | paywall | generated\n';
+    text += '------|-------|---------|---------|-----------\n';
+    
+    stats.forEach(s => {
+      if (s.start_bot || s.song_requested || s.paywll_open || s.paywall_open || s.song_generated) {
+        text += `${s.hour} | ${s.start_bot || 0} | ${s.song_requested || 0} | ${(s.paywll_open || 0) + (s.paywall_open || 0)} | ${s.song_generated || 0}\n`;
+      }
+    });
+    
+    return ctx.reply(text, {
+      reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
     });
   });
 
