@@ -114,6 +114,8 @@ export const setupAdminCommands = (bot) => {
     });
   });
 
+  const pad = (val, len = 5) => String(val).padEnd(len);
+  
   bot.hears('📅 По дням', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply(MESSAGES.NO_ACCESS);
@@ -122,14 +124,21 @@ export const setupAdminCommands = (bot) => {
     const stats = await getFunnelByDays(7);
     
     let text = MESSAGES.FUNNEL_DAYS + '\n\n';
-    text += 'Дата       | start | request | paywall | generated\n';
-    text += '------------|-------|---------|---------|-----------\n';
+    text += '```\n';
+    text += `Дата     | start | request | paywall | generated\n`;
+    text += `---------|-------|---------|---------|-----------\n`;
     
     stats.forEach(s => {
-      text += `${s.date} | ${s.start_bot || 0} | ${s.song_requested || 0} | ${(s.paywll_open || 0) + (s.paywall_open || 0)} | ${s.song_generated || 0}\n`;
+      const date = s.date.slice(5);
+      const start = pad(s.start_bot || 0);
+      const req = pad(s.song_requested || 0);
+      const pw = pad((s.paywll_open || 0) + (s.paywall_open || 0));
+      const gen = pad(s.song_generated || 0);
+      text += `${date} | ${start} | ${req} | ${pw} | ${gen}\n`;
     });
+    text += '```';
     
-    return ctx.reply(text, {
+    return ctx.replyWithMarkdown(text, {
       reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
     });
   });
@@ -143,16 +152,22 @@ export const setupAdminCommands = (bot) => {
     const stats = await getFunnelByHours();
     
     let text = MESSAGES.FUNNEL_HOURS + ` (${today}):\n\n`;
-    text += 'Время | start | request | paywall | generated\n';
-    text += '------|-------|---------|---------|-----------\n';
+    text += '```\n';
+    text += `Время | start | request | paywall | generated\n`;
+    text += `------|-------|---------|---------|-----------\n`;
     
     stats.forEach(s => {
       if (s.start_bot || s.song_requested || s.paywll_open || s.paywall_open || s.song_generated) {
-        text += `${s.hour} | ${s.start_bot || 0} | ${s.song_requested || 0} | ${(s.paywll_open || 0) + (s.paywall_open || 0)} | ${s.song_generated || 0}\n`;
+        const start = pad(s.start_bot || 0);
+        const req = pad(s.song_requested || 0);
+        const pw = pad((s.paywll_open || 0) + (s.paywall_open || 0));
+        const gen = pad(s.song_generated || 0);
+        text += `${s.hour} | ${start} | ${req} | ${pw} | ${gen}\n`;
       }
     });
+    text += '```';
     
-    return ctx.reply(text, {
+    return ctx.replyWithMarkdown(text, {
       reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
     });
   });
