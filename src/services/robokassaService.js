@@ -8,8 +8,8 @@ import { bot } from '../bot/index.js';
 const ROBOKASSA_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 export const CREDIT_PACKAGES = {
-  10: { credits: 10, price: 290, name: '10 кредитов' },
-  50: { credits: 50, price: 990, name: '50 кредитов' }
+  10: { credits: 10, price: 290, name: '10 токенов' },
+  50: { credits: 50, price: 990, name: '50 токенов' }
 };
 
 export const generatePaymentLink = async (userId, creditsAmount) => {
@@ -120,7 +120,7 @@ export const processPayment = async (params) => {
   try {
     await bot.telegram.sendMessage(
       userId,
-      `✅ *Оплата успешно завершена!*\n\nНа ваш счёт добавлено *${creditsAmount}* кредитов.`,
+      `✅ *Оплата успешно завершена!*\n\nНа ваш счёт добавлено *${creditsAmount}* токенов.`,
       { parse_mode: 'Markdown' }
     );
   } catch (err) {

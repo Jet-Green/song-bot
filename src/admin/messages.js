@@ -33,7 +33,7 @@ export const MESSAGES = {
   BONUS_INVALID_PARAMS: 'Некорректные параметры',
   BONUS_USER_NOT_FOUND: 'Пользователь не найден',
 
-  BONUS_SUCCESS: (amount, telegramId, bonusCredits, credits) => `✅ Начислено ${amount} бонусных кредитов пользователю ${telegramId}
+  BONUS_SUCCESS: (amount, telegramId, bonusCredits, credits) => `✅ Начислено ${amount} бонусных токенов пользователю ${telegramId}
 Новый баланс: ${bonusCredits} бонусных, ${credits} обычных`,
 
   SONG_STATUS_USAGE: '/songstatus <provider_song_id>',

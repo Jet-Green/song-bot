@@ -232,7 +232,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     return ctx.replyWithMarkdown(text);
   });
 
-  bot.hears('💎 Купить кредиты', async (ctx) => {
+  bot.hears('💎 Купить токены', async (ctx) => {
     await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
     
     const packages = Object.values(CREDIT_PACKAGES);

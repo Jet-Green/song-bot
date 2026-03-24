@@ -46,7 +46,7 @@ export const findOrCreateUser = async (telegramId, username, firstName, lastName
             const { bot } = await import('../bot/index.js');
             await bot.telegram.sendMessage(
               referrer.telegram_id,
-              `🎉 *Новый друг присоединился!*\n\nВам начислен 1 кредит за приглашение.`,
+              `🎉 *Новый друг присоединился!*\n\nВам начислен 1 токен за приглашение.`,
               { parse_mode: 'Markdown' }
             );
           } catch (e) {
