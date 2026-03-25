@@ -234,13 +234,12 @@ export const setupUserCommands = (bot, mainKeyboard) => {
   });
 
   bot.hears('💎 Купить токены', async (ctx) => {
+    console.log('Buy tokens handler triggered');
     await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
-    
-    const packages = Object.values(CREDIT_PACKAGES);
     
     return ctx.reply(MESSAGES.BUY_CREDITS, { 
       parse_mode: 'Markdown',
-      reply_markup: KEYBOARDS.buyCredits(packages)
+      reply_markup: KEYBOARDS.buyCredits(CREDIT_PACKAGES)
     });
   });
 
