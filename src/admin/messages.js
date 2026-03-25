@@ -69,7 +69,24 @@ Tags: ${track.tags}`,
 
   SONG_ERROR: (error) => `❌ *Ошибка:* ${error}`,
 
-  DB_UPDATED: '_Обновлено в БД_'
+  DB_UPDATED: '_Обновлено в БД_',
+
+  BROADCAST_INSTRUCTIONS: `📢 Рассылка сообщений:
+
+Отправить одному пользователю:
+/broadcast telegram_id сообщение
+
+Отправить всем:
+/broadcast сообщение
+
+Кнопка "🎁 Воспользоваться скидкой" добавляется автоматически.`,
+
+  BROADCAST_USAGE: '/broadcast [telegram_id] сообщение',
+
+  BROADCAST_RESULT: (success, fail, total) => `📢 Рассылка завершена:
+
+✅ Успешно: ${success}/${total}
+❌ Ошибок: ${fail}`
 };
 
 export const KEYBOARDS = {
@@ -77,7 +94,8 @@ export const KEYBOARDS = {
     ['👥 Пользователи'],
     ['🎵 Песни'],
     ['📊 Воронка'],
-    ['💰 Начислить бонусы']
+    ['💰 Начислить бонусы'],
+    ['📢 Рассылка']
   ],
 
   funnel: [

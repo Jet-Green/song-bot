@@ -291,6 +291,14 @@ export const setupUserCommands = (bot, mainKeyboard) => {
       return;
     }
     
+    if (data === 'discount') {
+      await ctx.answerCbQuery();
+      return ctx.reply(MESSAGES.BUY_CREDITS, { 
+        parse_mode: 'Markdown', 
+        reply_markup: KEYBOARDS.buyCredits(CREDIT_PACKAGES) 
+      });
+    }
+    
     if (data.startsWith('check_payment_')) {
       await ctx.answerCbQuery(MESSAGES.PAYMENT_CHECKING);
       return;

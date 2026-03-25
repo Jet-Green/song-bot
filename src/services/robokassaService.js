@@ -7,9 +7,13 @@ import { bot } from '../bot/index.js';
 
 const ROBOKASSA_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
+const DISCOUNT = 0.5;
+
+const applyDiscount = (price) => Math.round(price * (1 - DISCOUNT));
+
 export const CREDIT_PACKAGES = {
-  10: { credits: 10, price: 290, name: '10 токенов' },
-  50: { credits: 50, price: 990, name: '50 токенов' }
+  10: { credits: 10, price: 290, discountedPrice: applyDiscount(290), name: '10 токенов' },
+  50: { credits: 50, price: 990, discountedPrice: applyDiscount(990), name: '50 токенов' }
 };
 
 export const generatePaymentLink = async (userId, creditsAmount) => {
@@ -24,7 +28,7 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
   }
 
   const invId = Date.now();
-  const outSum = pkg.price.toFixed(2);
+  const outSum = pkg.discountedPrice.toFixed(2);
   const description = `Покупка ${pkg.name}`;
 
   const signatureString = `${config.robokassa.merchantLogin}:${outSum}:${invId}:${config.robokassa.password1}:Shp_credits=${creditsAmount}:Shp_user_id=${userId}`;
@@ -34,12 +38,14 @@ export const generatePaymentLink = async (userId, creditsAmount) => {
     user_id: user._id,
     provider: 'robokassa',
     status: 'pending',
-    amount: pkg.price,
+    amount: pkg.discountedPrice,
     credits_purchased: pkg.credits,
     provider_payment_id: invId.toString(),
     meta: {
       credits_amount: creditsAmount,
-      description
+      description,
+      originalPrice: pkg.price,
+      discountedPrice: pkg.discountedPrice
     }
   });
 

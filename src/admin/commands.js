@@ -183,6 +183,16 @@ export const setupAdminCommands = (bot) => {
     });
   });
 
+  bot.hears('📢 Рассылка', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    return ctx.reply(MESSAGES.BROADCAST_INSTRUCTIONS, {
+      reply_markup: Markup.keyboard(KEYBOARDS.back).resize().reply_markup
+    });
+  });
+
   bot.command('add_bonus', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply(MESSAGES.NO_ACCESS);
@@ -211,6 +221,64 @@ export const setupAdminCommands = (bot) => {
     await user.save();
     
     return ctx.reply(MESSAGES.BONUS_SUCCESS(amount, telegramId, user.bonus_credits, user.credits));
+  });
+
+  bot.command('broadcast', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const args = ctx.message.text.split(' ').slice(1);
+    
+    if (args.length < 1) {
+      return ctx.reply(MESSAGES.BROADCAST_USAGE);
+    }
+    
+    const firstArg = args[0];
+    const isNumber = !isNaN(Number(firstArg));
+    
+    let targetUserId = null;
+    let message;
+    
+    if (isNumber && args.length >= 2) {
+      targetUserId = Number(firstArg);
+      message = args.slice(1).join(' ');
+    } else {
+      message = args.join(' ');
+    }
+    
+    if (!message) {
+      return ctx.reply(MESSAGES.BROADCAST_USAGE);
+    }
+    
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
+    ]);
+    
+    if (targetUserId) {
+      try {
+        await ctx.telegram.sendMessage(targetUserId, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
+      } catch (e) {
+        return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
+      }
+    }
+    
+    const users = await User.find({});
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const user of users) {
+      try {
+        await ctx.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+    
+    return ctx.reply(MESSAGES.BROADCAST_RESULT(successCount, failCount, users.length));
   });
 
   bot.command('songstatus', async (ctx) => {

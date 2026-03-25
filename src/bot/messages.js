@@ -109,9 +109,12 @@ export const KEYBOARDS = {
   ],
 
   buyCredits: (packages) => ({
-    inline_keyboard: packages.map(pkg => [
-      { text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${pkg.credits}` }
-    ])
+    inline_keyboard: Object.values(packages).map(pkg => {
+      const label = pkg.discountedPrice 
+        ? `💎 ${pkg.name} - ${pkg.discountedPrice}₽ (было ${pkg.price}₽)`
+        : `💎 ${pkg.name} - ${pkg.price}₽`;
+      return [{ text: label, callback_data: `buy_credits_${pkg.credits}` }];
+    })
   }),
 
   paymentSuccess: (paymentUrl, invId) => ({
@@ -124,9 +127,12 @@ export const KEYBOARDS = {
   inviteNoCredits: (packages) => ({
     inline_keyboard: [
       [{ text: '👥 Пригласить друга', callback_data: 'invite_friend_no_credits' }],
-      ...Object.entries(packages).map(([credits, pkg]) =>
-        [{ text: `💎 ${pkg.name} - ${pkg.price}₽`, callback_data: `buy_credits_${credits}` }]
-      )
+      ...Object.entries(packages).map(([credits, pkg]) => {
+        const label = pkg.discountedPrice 
+          ? `💎 ${pkg.name} - ${pkg.discountedPrice}₽ (было ${pkg.price}₽)`
+          : `💎 ${pkg.name} - ${pkg.price}₽`;
+        return [{ text: label, callback_data: `buy_credits_${credits}` }];
+      })
     ]
   })
 };
