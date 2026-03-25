@@ -233,7 +233,7 @@ export const setupUserCommands = (bot, mainKeyboard) => {
     return ctx.replyWithMarkdown(text);
   });
 
-  bot.hears('💎 Купить токены', async (ctx) => {
+  bot.hears('💎 Купить кредиты', async (ctx) => {
     console.log('Buy tokens handler triggered');
     await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);
     
