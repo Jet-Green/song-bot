@@ -230,55 +230,91 @@ export const setupAdminCommands = (bot, userBot) => {
     
     const args = ctx.message.text.split(' ').slice(1);
     
-    if (args.length < 1) {
-      return ctx.reply(MESSAGES.BROADCAST_USAGE);
+    if (args.length === 0) {
+      ctx.session = ctx.session || {};
+      ctx.session.awaitingBroadcastToAll = true;
+      
+      return ctx.reply('Отправь сообщение для рассылки всем пользователям.\n\nОтмена: /broadcast_cancel', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Отмена', 'broadcast_cancel')]
+        ])
+      });
     }
     
-    const firstArg = args[0];
-    const isNumber = !isNaN(Number(firstArg));
-    
-    let targetUserId = null;
-    let message;
-    
-    if (isNumber && args.length >= 2) {
-      targetUserId = Number(firstArg);
-      message = args.slice(1).join(' ');
-    } else {
-      message = args.join(' ');
+    const targetUserId = Number(args[0]);
+    if (isNaN(targetUserId)) {
+      return ctx.reply('Неверный формат');
     }
     
-    if (!message) {
-      return ctx.reply(MESSAGES.BROADCAST_USAGE);
+    ctx.session = ctx.session || {};
+    ctx.session.awaitingBroadcast = { targetUserId };
+    
+    return ctx.reply(`Введите сообщение для пользователя ${targetUserId}:\n\nОтмена: /broadcast_cancel`);
+  });
+
+  bot.command('broadcast_cancel', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
     }
     
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
-    ]);
+    ctx.session = ctx.session || {};
+    delete ctx.session.awaitingBroadcast;
+    delete ctx.session.awaitingBroadcastToAll;
     
-    if (targetUserId) {
+    return ctx.reply('Рассылка отменена');
+  });
+
+  bot.on('text', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) return;
+    
+    ctx.session = ctx.session || {};
+    
+    if (ctx.session.awaitingBroadcast) {
+      const { targetUserId } = ctx.session.awaitingBroadcast;
+      delete ctx.session.awaitingBroadcast;
+      
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
+      ]);
+      
       try {
-        await userBot.telegram.sendMessage(targetUserId, message, { reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(targetUserId, ctx.message.text, { reply_markup: keyboard.reply_markup });
         return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
       } catch (e) {
         return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
       }
     }
     
-    const users = await User.find({});
-    
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const user of users) {
-      try {
-        await userBot.telegram.sendMessage(user.telegram_id, message, { reply_markup: keyboard.reply_markup });
-        successCount++;
-      } catch (e) {
-        failCount++;
+    if (ctx.session.awaitingBroadcastToAll) {
+      delete ctx.session.awaitingBroadcastToAll;
+      
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
+      ]);
+      
+      const users = await User.find({});
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const user of users) {
+        try {
+          await userBot.telegram.sendMessage(user.telegram_id, ctx.message.text, { reply_markup: keyboard.reply_markup });
+          successCount++;
+        } catch (e) {
+          failCount++;
+        }
       }
+      
+      return ctx.reply(MESSAGES.BROADCAST_RESULT(successCount, failCount, users.length));
     }
-    
-    return ctx.reply(MESSAGES.BROADCAST_RESULT(successCount, failCount, users.length));
+  });
+
+  bot.action('broadcast_cancel', async (ctx) => {
+    await ctx.answerCbQuery('Отменено');
+    ctx.session = ctx.session || {};
+    delete ctx.session.awaitingBroadcast;
+    delete ctx.session.awaitingBroadcastToAll;
+    return ctx.editMessageText('Рассылка отменена');
   });
 
   bot.command('songstatus', async (ctx) => {
