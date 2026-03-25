@@ -236,45 +236,50 @@ export const getFunnelByDays = async (days = 7) => {
   return stats;
 };
 
-export const getFunnelByHours = async (date = new Date()) => {
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
+export const getFunnelByHours = async () => {
+  const now = new Date();
+  const mskNow = toMsk(now);
+  const todayStartMsk = new Date(mskNow);
+  todayStartMsk.setHours(0, 0, 0, 0);
   
-  const dayEnd = new Date(dayStart);
-  dayEnd.setDate(dayEnd.getDate() + 1);
+  const todayStartUtc = new Date(todayStartMsk.getTime() - MSK_OFFSET);
   
-  const stats = [];
-  
-  for (let hour = 0; hour < 24; hour++) {
-    const hourStart = new Date(dayStart);
-    hourStart.setHours(hour);
-    
-    const hourEnd = new Date(hourStart);
-    hourEnd.setHours(hour + 1);
-    
-    const events = await Event.aggregate([
-      {
-        $match: {
-          event_name: { $in: EVENT_LIST },
-          event_time: { $gte: hourStart, $lt: hourEnd }
-        }
-      },
-      {
-        $group: {
-          _id: '$event_name',
-          count: { $sum: 1 }
-        }
+  const events = await Event.aggregate([
+    {
+      $match: {
+        event_name: { $in: EVENT_LIST },
+        event_time: { $gte: todayStartUtc }
       }
-    ]);
+    },
+    {
+      $group: {
+        _id: {
+          hour: { $hour: { date: '$event_time', timezone: '+0300' } },
+          event: '$event_name'
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { '_id.hour': 1 }
+    }
+  ]);
+  
+  const result = [];
+  
+  for (let h = 0; h <= mskNow.getHours(); h++) {
+    const hourEvents = events.filter(e => e._id.hour === h);
+    const row = { hour: `${h.toString().padStart(2, '0')}:00` };
     
-    const hourStats = { hour: `${hour.toString().padStart(2, '0')}:00` };
-    events.forEach(e => {
-      hourStats[e._id] = e.count;
+    EVENT_LIST.forEach(eventName => {
+      const event = hourEvents.find(e => e._id.event === eventName);
+      row[eventName] = event ? event.count : 0;
     });
-    stats.push(hourStats);
+    
+    result.push(row);
   }
   
-  return stats;
+  return result;
 };
 
 export const getPaywallByHours = async () => {
