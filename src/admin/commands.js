@@ -133,20 +133,21 @@ export const setupAdminCommands = (bot, userBot) => {
       return ctx.reply(MESSAGES.NO_ACCESS);
     }
     
-    const stats = await getFunnelByDays(7);
+    const stats = await getFunnelByHours();
     
-    let text = MESSAGES.FUNNEL_DAYS + '\n\n';
+    let text = MESSAGES.FUNNEL_HOURS + '\n\n';
     text += '```\n';
-    text += `Дата     | start | request | paywall | generated\n`;
-    text += `---------|-------|---------|---------|-----------\n`;
+    text += `Время | start | request | paywall | generated\n`;
+    text += `------|-------|---------|---------|-----------\n`;
     
     stats.forEach(s => {
-      const date = s.date.slice(5);
-      const start = pad(s.start_bot || 0);
-      const req = pad(s.song_requested || 0);
-      const pw = pad((s.paywll_open || 0) + (s.paywall_open || 0));
-      const gen = pad(s.song_generated || 0);
-      text += `${date} | ${start} | ${req} | ${pw} | ${gen}\n`;
+      if (s.start_bot || s.song_requested || s.paywll_open || s.paywall_open || s.song_generated) {
+        const start = pad(s.start_bot || 0);
+        const req = pad(s.song_requested || 0);
+        const pw = pad((s.paywll_open || 0) + (s.paywall_open || 0));
+        const gen = pad(s.song_generated || 0);
+        text += `${s.hour} | ${start} | ${req} | ${pw} | ${gen}\n`;
+      }
     });
     text += '```';
     
