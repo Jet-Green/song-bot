@@ -117,9 +117,17 @@ export const setupAdminCommands = (bot, userBot) => {
     });
   });
 
-  const pad = (val, len = 5) => String(val).padEnd(len);
-  
-  bot.hears('📅 По дням', async (ctx) => {
+  bot.hears('📈 Статистика', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    return ctx.reply('Выберите статистику:', {
+      reply_markup: Markup.keyboard(KEYBOARDS.stats).resize().reply_markup
+    });
+  });
+
+  bot.hears('📊 Все события', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply(MESSAGES.NO_ACCESS);
     }
@@ -142,7 +150,24 @@ export const setupAdminCommands = (bot, userBot) => {
     text += '```';
     
     return ctx.replyWithMarkdown(text, {
-      reply_markup: Markup.keyboard(KEYBOARDS.funnel).resize().reply_markup
+      reply_markup: Markup.keyboard(KEYBOARDS.stats).resize().reply_markup
+    });
+  });
+
+  bot.hears('🚧 Paywall', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const stats = await getPaywallByHours();
+    const total = stats.reduce((sum, s) => sum + s.count, 0);
+    
+    const text = '📊 Paywall по часам (МСК):\n\n' +
+      stats.map(s => `${s.hour}: ${s.count}`).join('\n') +
+      `\n\n📊 Итого: ${total}`;
+    
+    return ctx.reply(text, {
+      reply_markup: Markup.keyboard(KEYBOARDS.stats).resize().reply_markup
     });
   });
 
