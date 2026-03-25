@@ -192,7 +192,6 @@ export const setupAdminCommands = (bot, userBot) => {
       reply_markup: Markup.keyboard(KEYBOARDS.back).resize().reply_markup
     });
   });
-  });
 
   bot.command('add_bonus', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
