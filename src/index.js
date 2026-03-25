@@ -7,7 +7,7 @@ let adminBot;
 
 const start = async () => {
   await connectDB();
-  await startBot();
+  const userBot = await startBot();
   
   if (config.adminBotToken) {
     console.log('Starting admin bot with token:', config.adminBotToken.slice(0, 20) + '...');
@@ -15,7 +15,7 @@ const start = async () => {
     adminBot = new Telegraf(config.adminBotToken);
     
     const { setupAdminCommands } = await import('./admin/commands.js');
-    setupAdminCommands(adminBot);
+    setupAdminCommands(adminBot, userBot);
     
     adminBot.launch(() => {
       console.log('Admin bot started successfully');

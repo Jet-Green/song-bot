@@ -5,6 +5,7 @@ import { songWizard, STEPS, STYLES } from '../services/songWizard.js';
 import Song from '../models/Song.js';
 import User from '../models/User.js';
 import { MESSAGES, KEYBOARDS } from './messages.js';
+import { Markup } from 'telegraf';
 
 const sendNoCreditsMessage = async (ctx) => {
   await logEvent(ctx.from.id, EVENTS.PAYWALL_OPEN);

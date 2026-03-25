@@ -8,7 +8,7 @@ import { MESSAGES, KEYBOARDS } from './messages.js';
 
 const isAdmin = (userId) => config.adminIds.includes(userId);
 
-export const setupAdminCommands = (bot) => {
+export const setupAdminCommands = (bot, userBot) => {
   bot.command('start', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
       return ctx.reply(MESSAGES.NO_ACCESS);
@@ -192,6 +192,7 @@ export const setupAdminCommands = (bot) => {
       reply_markup: Markup.keyboard(KEYBOARDS.back).resize().reply_markup
     });
   });
+  });
 
   bot.command('add_bonus', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
@@ -257,7 +258,7 @@ export const setupAdminCommands = (bot) => {
     
     if (targetUserId) {
       try {
-        await ctx.telegram.sendMessage(targetUserId, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(targetUserId, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
         return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
       } catch (e) {
         return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
@@ -271,7 +272,7 @@ export const setupAdminCommands = (bot) => {
     
     for (const user of users) {
       try {
-        await ctx.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
         successCount++;
       } catch (e) {
         failCount++;
