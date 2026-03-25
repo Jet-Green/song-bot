@@ -8,6 +8,8 @@ import { MESSAGES, KEYBOARDS } from './messages.js';
 
 const isAdmin = (userId) => config.adminIds.includes(userId);
 
+const broadcastState = new Map();
+
 export const setupAdminCommands = (bot, userBot) => {
   bot.command('start', async (ctx) => {
     if (!isAdmin(ctx.from.id)) {
@@ -231,8 +233,7 @@ export const setupAdminCommands = (bot, userBot) => {
     const args = ctx.message.text.split(' ').slice(1);
     
     if (args.length === 0) {
-      ctx.session = ctx.session || {};
-      ctx.session.awaitingBroadcastToAll = true;
+      broadcastState.set(ctx.from.id, { awaitingBroadcastToAll: true });
       
       return ctx.reply('Отправь сообщение для рассылки всем пользователям.\n\nОтмена: /broadcast_cancel', {
         reply_markup: Markup.inlineKeyboard([
@@ -246,8 +247,7 @@ export const setupAdminCommands = (bot, userBot) => {
       return ctx.reply('Неверный формат');
     }
     
-    ctx.session = ctx.session || {};
-    ctx.session.awaitingBroadcast = { targetUserId };
+    broadcastState.set(ctx.from.id, { awaitingBroadcast: targetUserId });
     
     return ctx.reply(`Введите сообщение для пользователя ${targetUserId}:\n\nОтмена: /broadcast_cancel`);
   });
@@ -257,9 +257,7 @@ export const setupAdminCommands = (bot, userBot) => {
       return ctx.reply(MESSAGES.NO_ACCESS);
     }
     
-    ctx.session = ctx.session || {};
-    delete ctx.session.awaitingBroadcast;
-    delete ctx.session.awaitingBroadcastToAll;
+    broadcastState.delete(ctx.from.id);
     
     return ctx.reply('Рассылка отменена');
   });
@@ -267,31 +265,16 @@ export const setupAdminCommands = (bot, userBot) => {
   bot.on('text', async (ctx) => {
     if (!isAdmin(ctx.from.id)) return;
     
-    ctx.session = ctx.session || {};
+    const state = broadcastState.get(ctx.from.id);
+    if (!state) return;
     
-    if (ctx.session.awaitingBroadcast) {
-      const { targetUserId } = ctx.session.awaitingBroadcast;
-      delete ctx.session.awaitingBroadcast;
-      
-      const keyboard = Markup.inlineKeyboard([
-        [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
-      ]);
-      
-      try {
-        await userBot.telegram.sendMessage(targetUserId, ctx.message.text, { reply_markup: keyboard.reply_markup });
-        return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
-      } catch (e) {
-        return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
-      }
-    }
+    broadcastState.delete(ctx.from.id);
     
-    if (ctx.session.awaitingBroadcastToAll) {
-      delete ctx.session.awaitingBroadcastToAll;
-      
-      const keyboard = Markup.inlineKeyboard([
-        [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
-      ]);
-      
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
+    ]);
+    
+    if (state.awaitingBroadcastToAll) {
       const users = await User.find({});
       let successCount = 0;
       let failCount = 0;
@@ -307,13 +290,20 @@ export const setupAdminCommands = (bot, userBot) => {
       
       return ctx.reply(MESSAGES.BROADCAST_RESULT(successCount, failCount, users.length));
     }
+    
+    if (state.awaitingBroadcast) {
+      try {
+        await userBot.telegram.sendMessage(state.awaitingBroadcast, ctx.message.text, { reply_markup: keyboard.reply_markup });
+        return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
+      } catch (e) {
+        return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
+      }
+    }
   });
 
   bot.action('broadcast_cancel', async (ctx) => {
     await ctx.answerCbQuery('Отменено');
-    ctx.session = ctx.session || {};
-    delete ctx.session.awaitingBroadcast;
-    delete ctx.session.awaitingBroadcastToAll;
+    broadcastState.delete(ctx.from.id);
     return ctx.editMessageText('Рассылка отменена');
   });
 
