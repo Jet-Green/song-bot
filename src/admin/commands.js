@@ -274,6 +274,14 @@ export const setupAdminCommands = (bot, userBot) => {
       [Markup.button.callback('🎁 Воспользоваться скидкой', 'discount')]
     ]);
     
+    const messageOptions = {
+      reply_markup: keyboard.reply_markup
+    };
+    
+    if (ctx.message.entities && ctx.message.entities.length > 0) {
+      messageOptions.entities = ctx.message.entities;
+    }
+    
     if (state.awaitingBroadcastToAll) {
       const users = await User.find({});
       let successCount = 0;
@@ -281,7 +289,7 @@ export const setupAdminCommands = (bot, userBot) => {
       
       for (const user of users) {
         try {
-          await userBot.telegram.sendMessage(user.telegram_id, ctx.message.text, { reply_markup: keyboard.reply_markup });
+          await userBot.telegram.sendMessage(user.telegram_id, ctx.message.text, messageOptions);
           successCount++;
         } catch (e) {
           failCount++;
@@ -293,7 +301,7 @@ export const setupAdminCommands = (bot, userBot) => {
     
     if (state.awaitingBroadcast) {
       try {
-        await userBot.telegram.sendMessage(state.awaitingBroadcast, ctx.message.text, { reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(state.awaitingBroadcast, ctx.message.text, messageOptions);
         return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
       } catch (e) {
         return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
