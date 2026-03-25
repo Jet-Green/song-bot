@@ -1,5 +1,5 @@
 import config from '../config/index.js';
-import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats, getFunnelByDays, getFunnelByHours, getRegistrationsStats, getRegistrationsByHours } from './statsService.js';
+import { getWeeklyStats, getDailyStats, getActiveUsersStats, getTotalStats, getHourlyStats, getFunnelByDays, getFunnelByHours, getRegistrationsStats, getRegistrationsByHours, getPaywallByHours, getAllEventsByHours } from './statsService.js';
 import User from '../models/User.js';
 import Song from '../models/Song.js';
 import { getMusicDetails } from '../services/sunoService.js';
@@ -76,10 +76,10 @@ export const setupAdminCommands = (bot, userBot) => {
     let title, stats;
     
     if (messageText.includes('Пользователи')) {
-      title = '👥 Регистрации по часам за сегодня:';
+      title = '👥 Регистрации по часам за сегодня (МСК):';
       stats = await getRegistrationsByHours();
     } else {
-      title = MESSAGES.SONGS_HOURLY;
+      title = '🎵 Песни по часам за сегодня (МСК):';
       stats = await getHourlyStats();
     }
     
@@ -378,5 +378,47 @@ export const setupAdminCommands = (bot, userBot) => {
     }
     
     return ctx.replyWithMarkdown(statusText);
+  });
+
+  bot.command('paywall', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const stats = await getPaywallByHours();
+    const total = stats.reduce((sum, s) => sum + s.count, 0);
+    
+    const text = '📊 Paywall по часам (МСК):\n\n' +
+      stats.map(s => `${s.hour}: ${s.count}`).join('\n') +
+      `\n\n📊 Итого: ${total}`;
+    
+    return ctx.reply(text);
+  });
+
+  bot.command('stats', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) {
+      return ctx.reply(MESSAGES.NO_ACCESS);
+    }
+    
+    const { eventNames, data } = await getAllEventsByHours();
+    
+    let text = '📊 События по часам (МСК):\n\n```\n';
+    text += 'Час    | ' + eventNames.map(n => n.padEnd(15)).join(' | ') + '\n';
+    text += '--------|' + eventNames.map(() => '-'.repeat(16)).join('-+-') + '\n';
+    
+    data.forEach(row => {
+      text += row.hour + ' | ' + eventNames.map(n => String(row[n] || 0).padEnd(15)).join(' | ') + '\n';
+    });
+    
+    const totals = {};
+    eventNames.forEach(n => {
+      totals[n] = data.reduce((sum, row) => sum + (row[n] || 0), 0);
+    });
+    
+    text += '--------|' + eventNames.map(() => '-'.repeat(16)).join('-+-') + '\n';
+    text += 'Итого  | ' + eventNames.map(n => String(totals[n]).padEnd(15)).join(' | ') + '\n';
+    text += '```';
+    
+    return ctx.replyWithMarkdown(text);
   });
 };

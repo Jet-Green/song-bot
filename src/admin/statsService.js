@@ -276,3 +276,87 @@ export const getFunnelByHours = async (date = new Date()) => {
   
   return stats;
 };
+
+export const getPaywallByHours = async () => {
+  return getEventsByHours(['paywall_open', 'paywll_open']);
+};
+
+export const getEventsByHours = async (eventNames) => {
+  const now = new Date();
+  const mskNow = toMsk(now);
+  const todayStartMsk = new Date(mskNow);
+  todayStartMsk.setHours(0, 0, 0, 0);
+  
+  const todayStartUtc = new Date(todayStartMsk.getTime() - MSK_OFFSET);
+  
+  const events = await Event.aggregate([
+    {
+      $match: {
+        event_name: { $in: eventNames },
+        event_time: { $gte: todayStartUtc }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $hour: { date: '$event_time', timezone: '+0300' }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { '_id': 1 }
+    }
+  ]);
+  
+  const result = [];
+  for (let h = 0; h <= mskNow.getHours(); h++) {
+    const event = events.find(e => e._id === h);
+    result.push({ hour: `${h.toString().padStart(2, '0')}:00`, count: event ? event.count : 0 });
+  }
+  
+  return result;
+};
+
+export const getAllEventsByHours = async () => {
+  const now = new Date();
+  const mskNow = toMsk(now);
+  const todayStartMsk = new Date(mskNow);
+  todayStartMsk.setHours(0, 0, 0, 0);
+  
+  const todayStartUtc = new Date(todayStartMsk.getTime() - MSK_OFFSET);
+  
+  const events = await Event.aggregate([
+    {
+      $match: {
+        event_time: { $gte: todayStartUtc }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          hour: { $hour: { date: '$event_time', timezone: '+0300' } },
+          event: '$event_name'
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { '_id.hour': 1 }
+    }
+  ]);
+  
+  const eventNames = [...new Set(events.map(e => e._id.event))];
+  const result = [];
+  
+  for (let h = 0; h <= mskNow.getHours(); h++) {
+    const row = { hour: `${h.toString().padStart(2, '0')}:00` };
+    eventNames.forEach(name => {
+      const event = events.find(e => e._id.hour === h && e._id.event === name);
+      row[name] = event ? event.count : 0;
+    });
+    result.push(row);
+  }
+  
+  return { eventNames, data: result };
+};
