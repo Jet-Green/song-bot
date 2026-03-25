@@ -257,7 +257,7 @@ export const setupAdminCommands = (bot, userBot) => {
     
     if (targetUserId) {
       try {
-        await userBot.telegram.sendMessage(targetUserId, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(targetUserId, message, { reply_markup: keyboard.reply_markup });
         return ctx.reply(MESSAGES.BROADCAST_RESULT(1, 0, 1));
       } catch (e) {
         return ctx.reply(MESSAGES.BROADCAST_RESULT(0, 1, 1));
@@ -271,7 +271,7 @@ export const setupAdminCommands = (bot, userBot) => {
     
     for (const user of users) {
       try {
-        await userBot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown', reply_markup: keyboard.reply_markup });
+        await userBot.telegram.sendMessage(user.telegram_id, message, { reply_markup: keyboard.reply_markup });
         successCount++;
       } catch (e) {
         failCount++;
