@@ -9,6 +9,7 @@ import { MESSAGES, KEYBOARDS } from './messages.js';
 const isAdmin = (userId) => config.adminIds.includes(userId);
 
 const broadcastState = new Map();
+const pad = (val, len = 5) => String(val).padEnd(len);
 
 export const setupAdminCommands = (bot, userBot) => {
   bot.command('start', async (ctx) => {
